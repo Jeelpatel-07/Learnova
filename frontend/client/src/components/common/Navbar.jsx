@@ -19,7 +19,7 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'instructor';
+  const isAdmin = user?.role === 'Admin' || user?.role === 'Instructor';
 
   const handleLogout = () => {
     logout();

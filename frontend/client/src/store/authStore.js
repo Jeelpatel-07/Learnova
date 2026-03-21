@@ -18,7 +18,10 @@ const useAuthStore = create((set, get) => ({
       set({ user, token, isAuthenticated: true, loading: false });
       return user;
     } catch (err) {
-      set({ error: err.response?.data?.message || 'Login failed', loading: false });
+      set({
+        error: err.response?.data?.message || err.message || 'Login failed',
+        loading: false,
+      });
       throw err;
     }
   },
@@ -33,7 +36,10 @@ const useAuthStore = create((set, get) => ({
       set({ user, token, isAuthenticated: true, loading: false });
       return user;
     } catch (err) {
-      set({ error: err.response?.data?.message || 'Signup failed', loading: false });
+      set({
+        error: err.response?.data?.message || err.message || 'Signup failed',
+        loading: false,
+      });
       throw err;
     }
   },

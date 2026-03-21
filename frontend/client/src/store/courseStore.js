@@ -113,12 +113,15 @@ const useCourseStore = create((set, get) => ({
     }
   },
 
-  // Add lesson
+  // Add lesson — backend returns the newly added lesson, not the full course
+  // So we re-fetch the course to get updated data
   addLesson: async (courseId, lessonData) => {
     try {
       const res = await API.post(`/courses/${courseId}/lessons`, lessonData);
+      // Re-fetch the course to get the updated lessons array
+      const courseRes = await API.get(`/courses/${courseId}`);
       if (get().currentCourse?._id === courseId) {
-        set({ currentCourse: res.data.data });
+        set({ currentCourse: courseRes.data.data });
       }
       return res.data.data;
     } catch (err) {
@@ -126,12 +129,14 @@ const useCourseStore = create((set, get) => ({
     }
   },
 
-  // Update lesson
+  // Update lesson — backend returns the updated lesson, not the full course
   updateLesson: async (courseId, lessonId, lessonData) => {
     try {
       const res = await API.put(`/courses/${courseId}/lessons/${lessonId}`, lessonData);
+      // Re-fetch the course to get the updated lessons array
+      const courseRes = await API.get(`/courses/${courseId}`);
       if (get().currentCourse?._id === courseId) {
-        set({ currentCourse: res.data.data });
+        set({ currentCourse: courseRes.data.data });
       }
       return res.data.data;
     } catch (err) {
@@ -139,13 +144,34 @@ const useCourseStore = create((set, get) => ({
     }
   },
 
-  // Delete lesson
+  // Delete lesson — backend returns {success, message} with no data
   deleteLesson: async (courseId, lessonId) => {
     try {
-      const res = await API.delete(`/courses/${courseId}/lessons/${lessonId}`);
+      await API.delete(`/courses/${courseId}/lessons/${lessonId}`);
+      // Re-fetch the course to get the updated lessons array
+      const courseRes = await API.get(`/courses/${courseId}`);
       if (get().currentCourse?._id === courseId) {
-        set({ currentCourse: res.data.data });
+        set({ currentCourse: courseRes.data.data });
       }
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  // Upload course image
+  uploadCourseImage: async (courseId, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await API.post(`/courses/${courseId}/upload-image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      // Re-fetch course to get updated image
+      const courseRes = await API.get(`/courses/${courseId}`);
+      if (get().currentCourse?._id === courseId) {
+        set({ currentCourse: courseRes.data.data });
+      }
+      return res.data.data;
     } catch (err) {
       throw err;
     }
@@ -155,40 +181,3 @@ const useCourseStore = create((set, get) => ({
 }));
 
 export default useCourseStore;
-
-/*
-============================================
-BACKEND API REQUIRED:
-============================================
-
-GET    /api/courses              → All courses (admin)
-GET    /api/courses/published    → Published courses (public/learner)
-GET    /api/courses/my-courses   → Enrolled courses (learner, needs auth)
-GET    /api/courses/:id          → Single course with lessons, quizzes
-POST   /api/courses              → Create course { title, tags, description, ... }
-PUT    /api/courses/:id          → Update course
-PATCH  /api/courses/:id/toggle-publish → Toggle published status
-DELETE /api/courses/:id          → Delete course
-
-POST   /api/courses/:id/enroll   → Enroll user in course
-POST   /api/courses/:id/lessons  → Add lesson to course
-PUT    /api/courses/:id/lessons/:lessonId → Update lesson
-DELETE /api/courses/:id/lessons/:lessonId → Delete lesson
-
-Course response shape:
-{
-  _id, title, description, tags: [], image, published,
-  visibility: "everyone"|"signed_in",
-  accessRule: "open"|"invitation"|"payment",
-  price: number,
-  responsible: { _id, name },
-  lessons: [{ _id, title, type, fileUrl, duration, allowDownload, description, attachments }],
-  quizzes: [{ _id, title, questions }],
-  views: number,
-  totalDuration: number,
-  attendees: [userId],
-  createdAt, updatedAt
-}
-
-============================================
-*/

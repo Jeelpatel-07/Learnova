@@ -20,8 +20,8 @@ const Reporting = () => {
   const [search, setSearch] = useState('');
   const [showColumns, setShowColumns] = useState(false);
   const [columns, setColumns] = useState({
-    srNo: true, course: true, participant: true, enrolled: true, start: true,
-    timeSpent: true, completion: true, completedDate: true, status: true,
+    srNo: true, course: true, participant: true,
+    completion: true, status: true,
   });
 
   useEffect(() => {
@@ -31,17 +31,28 @@ const Reporting = () => {
   const fetchReporting = async () => {
     try {
       const res = await API.get('/reporting');
-      setStats(res.data.data.stats);
-      setProgress(res.data.data.progress);
+      const data = res.data.data;
+      // Map backend response shape to component state
+      // Backend returns: { totalParticipants, yetToStart, inProgress, completed, table: [{userName, course, progressPercent, status}] }
+      setStats({
+        total: data.totalParticipants || 0,
+        yetToStart: data.yetToStart || 0,
+        inProgress: data.inProgress || 0,
+        completed: data.completed || 0,
+      });
+      // Map table data to component format
+      const mappedProgress = (data.table || []).map((item, index) => ({
+        id: index + 1,
+        course: item.course || 'Unknown Course',
+        participant: item.userName || 'Unknown User',
+        completion: item.progressPercent || 0,
+        status: item.status || 'YetToStart',
+      }));
+      setProgress(mappedProgress);
     } catch (err) {
-      // Mock data for demo
-      setStats({ total: 24, yetToStart: 5, inProgress: 12, completed: 7 });
-      setProgress([
-        { id: 1, course: 'React Fundamentals', participant: 'John Doe', enrolledDate: '2024-01-10', startDate: '2024-01-11', timeSpent: '3h 20m', completion: 85, completedDate: null, status: 'in_progress' },
-        { id: 2, course: 'Node.js Basics', participant: 'Jane Smith', enrolledDate: '2024-01-08', startDate: '2024-01-09', timeSpent: '5h 10m', completion: 100, completedDate: '2024-01-15', status: 'completed' },
-        { id: 3, course: 'Python ML', participant: 'Bob Wilson', enrolledDate: '2024-01-12', startDate: null, timeSpent: '-', completion: 0, completedDate: null, status: 'yet_to_start' },
-        { id: 4, course: 'React Fundamentals', participant: 'Alice Brown', enrolledDate: '2024-01-10', startDate: '2024-01-12', timeSpent: '1h 45m', completion: 42, completedDate: null, status: 'in_progress' },
-      ]);
+      console.error('Reporting fetch error:', err);
+      setStats({ total: 0, yetToStart: 0, inProgress: 0, completed: 0 });
+      setProgress([]);
     } finally {
       setLoading(false);
     }
@@ -49,9 +60,9 @@ const Reporting = () => {
 
   const overviewCards = [
     { key: 'all', label: 'Total Participants', value: stats.total, icon: HiOutlineUsers, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-200' },
-    { key: 'yet_to_start', label: 'Yet to Start', value: stats.yetToStart, icon: HiOutlineClock, color: 'bg-amber-50 text-amber-600', border: 'border-amber-200' },
-    { key: 'in_progress', label: 'In Progress', value: stats.inProgress, icon: HiOutlinePlay, color: 'bg-blue-50 text-blue-600', border: 'border-blue-200' },
-    { key: 'completed', label: 'Completed', value: stats.completed, icon: HiOutlineCheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200' },
+    { key: 'YetToStart', label: 'Yet to Start', value: stats.yetToStart, icon: HiOutlineClock, color: 'bg-amber-50 text-amber-600', border: 'border-amber-200' },
+    { key: 'InProgress', label: 'In Progress', value: stats.inProgress, icon: HiOutlinePlay, color: 'bg-blue-50 text-blue-600', border: 'border-blue-200' },
+    { key: 'Completed', label: 'Completed', value: stats.completed, icon: HiOutlineCheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200' },
   ];
 
   const filteredProgress = progress.filter((p) => {
@@ -62,9 +73,9 @@ const Reporting = () => {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'completed': return <Badge variant="success">Completed</Badge>;
-      case 'in_progress': return <Badge variant="info">In Progress</Badge>;
-      case 'yet_to_start': return <Badge variant="warning">Yet to Start</Badge>;
+      case 'Completed': return <Badge variant="success">Completed</Badge>;
+      case 'InProgress': return <Badge variant="info">In Progress</Badge>;
+      case 'YetToStart': return <Badge variant="warning">Yet to Start</Badge>;
       default: return <Badge variant="gray">{status}</Badge>;
     }
   };
@@ -140,11 +151,7 @@ const Reporting = () => {
                 {columns.srNo && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">#</th>}
                 {columns.course && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Course</th>}
                 {columns.participant && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Participant</th>}
-                {columns.enrolled && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Enrolled</th>}
-                {columns.start && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Started</th>}
-                {columns.timeSpent && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Time Spent</th>}
                 {columns.completion && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Progress</th>}
-                {columns.completedDate && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Completed</th>}
                 {columns.status && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Status</th>}
               </tr>
             </thead>
@@ -154,9 +161,6 @@ const Reporting = () => {
                   {columns.srNo && <td className="px-6 py-4 text-sm text-gray-500">{i + 1}</td>}
                   {columns.course && <td className="px-6 py-4 text-sm font-semibold text-gray-800">{row.course}</td>}
                   {columns.participant && <td className="px-6 py-4 text-sm text-gray-700">{row.participant}</td>}
-                  {columns.enrolled && <td className="px-6 py-4 text-sm text-gray-500">{formatDate(row.enrolledDate)}</td>}
-                  {columns.start && <td className="px-6 py-4 text-sm text-gray-500">{formatDate(row.startDate)}</td>}
-                  {columns.timeSpent && <td className="px-6 py-4 text-sm text-gray-500">{row.timeSpent}</td>}
                   {columns.completion && (
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -167,7 +171,6 @@ const Reporting = () => {
                       </div>
                     </td>
                   )}
-                  {columns.completedDate && <td className="px-6 py-4 text-sm text-gray-500">{formatDate(row.completedDate)}</td>}
                   {columns.status && <td className="px-6 py-4">{getStatusBadge(row.status)}</td>}
                 </tr>
               ))}
@@ -186,24 +189,3 @@ const Reporting = () => {
 };
 
 export default Reporting;
-
-/*
-============================================
-BACKEND API REQUIRED:
-============================================
-
-GET /api/reporting
-Response: {
-  success: true,
-  data: {
-    stats: { total, yetToStart, inProgress, completed },
-    progress: [{
-      id, course, participant, enrolledDate,
-      startDate, timeSpent, completion, completedDate, status
-    }]
-  }
-}
-
-Status values: "yet_to_start" | "in_progress" | "completed"
-============================================
-*/

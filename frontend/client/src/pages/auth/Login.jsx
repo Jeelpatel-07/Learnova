@@ -26,7 +26,7 @@ const Login = () => {
     try {
       const user = await login(form.email, form.password);
       toast.success(`Welcome back, ${user.name}! 👋`);
-      if (user.role === 'admin' || user.role === 'instructor') {
+      if (user.role === 'Admin' || user.role === 'Instructor') {
         navigate('/admin/dashboard');
       } else {
         navigate('/my-courses');

@@ -285,7 +285,7 @@ const LearningPage = () => {
               )}
 
               {/* Video */}
-              {currentLesson.type === 'video' && (
+              {currentLesson.type === 'Video' && (
                 <div className="aspect-video bg-black rounded-2xl overflow-hidden mb-6">
                   {currentLesson.fileUrl?.includes('youtube') || currentLesson.fileUrl?.includes('youtu.be') ? (
                     <iframe
@@ -301,7 +301,7 @@ const LearningPage = () => {
               )}
 
               {/* Document */}
-              {currentLesson.type === 'document' && (
+              {currentLesson.type === 'Document' && (
                 <div className="bg-gray-100 rounded-2xl p-8 mb-6 text-center">
                   <HiOutlineDocumentText className="w-16 h-16 text-blue-400 mx-auto mb-4" />
                   <p className="text-gray-600 mb-4">Document: {currentLesson.title}</p>
@@ -321,7 +321,7 @@ const LearningPage = () => {
               )}
 
               {/* Image */}
-              {currentLesson.type === 'image' && (
+              {currentLesson.type === 'Image' && (
                 <div className="rounded-2xl overflow-hidden mb-6">
                   <img src={currentLesson.fileUrl} alt={currentLesson.title} className="w-full max-h-[600px] object-contain bg-gray-100" />
                   {currentLesson.allowDownload && (

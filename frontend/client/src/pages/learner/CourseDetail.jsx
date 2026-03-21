@@ -92,10 +92,9 @@ const CourseDetail = () => {
 
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'video': return <HiOutlineVideoCamera className="w-4 h-4 text-red-500" />;
-      case 'document': return <HiOutlineDocumentText className="w-4 h-4 text-blue-500" />;
-      case 'image': return <HiOutlinePhotograph className="w-4 h-4 text-green-500" />;
-      case 'quiz': return <HiOutlinePuzzle className="w-4 h-4 text-purple-500" />;
+      case 'Video': return <HiOutlineVideoCamera className="w-4 h-4 text-red-500" />;
+      case 'Document': return <HiOutlineDocumentText className="w-4 h-4 text-blue-500" />;
+      case 'Image': return <HiOutlinePhotograph className="w-4 h-4 text-green-500" />;
       default: return <HiOutlineBookOpen className="w-4 h-4 text-gray-400" />;
     }
   };
@@ -162,7 +161,7 @@ const CourseDetail = () => {
             {/* Action Button */}
             {!progress ? (
               <button onClick={handleEnroll} className="btn-primary text-base py-3 px-8 flex items-center gap-2">
-                {course.accessRule === 'payment' ? (
+                {course.accessRule === 'Paid' ? (
                   <>Buy Course (${course.price})</>
                 ) : (
                   <>Start Learning <HiOutlineArrowRight className="w-5 h-5" /></>
@@ -264,11 +263,11 @@ const CourseDetail = () => {
             {reviews.map((review, i) => (
               <div key={i} className="flex gap-4 p-4 bg-gray-50 rounded-xl">
                 <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                  {getInitials(review.userName)}
+                  {getInitials(review.userId?.name || 'U')}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-sm text-gray-800">{review.userName}</span>
+                    <span className="font-semibold text-sm text-gray-800">{review.userId?.name || 'Anonymous'}</span>
                     <StarRating rating={review.rating} readonly size="sm" />
                   </div>
                   <p className="text-sm text-gray-600">{review.comment}</p>
