@@ -538,14 +538,27 @@ const CourseForm = () => {
 
       {/* Description Tab */}
       {activeTab === 'description' && (
-        <div className="card-elevated p-6 animate-fade-in">
-          <h3 className="font-bold text-gray-800 mb-4">Course Description</h3>
-          <textarea
-            value={course.description || ''}
-            onChange={(e) => handleUpdateCourse('description', e.target.value)}
-            className="input-field min-h-[250px] resize-y"
-            placeholder="Describe what learners will learn in this course..."
-          />
+        <div className="card-elevated p-6 space-y-6 animate-fade-in">
+          <div>
+            <h3 className="font-bold text-gray-800 mb-4">Course Description</h3>
+            <textarea
+              value={course.description || ''}
+              onChange={(e) => handleUpdateCourse('description', e.target.value)}
+              className="input-field min-h-[250px] resize-y"
+              placeholder="Describe what learners will learn in this course..."
+            />
+          </div>
+          <div>
+            <label className="input-label">Website URL</label>
+            <input
+              type="url"
+              value={course.website || ''}
+              onChange={(e) => handleUpdateCourse('website', e.target.value)}
+              placeholder="https://example.com/course-page"
+              className="input-field max-w-lg"
+            />
+            <p className="text-xs text-gray-400 mt-1">Provide a website URL for this course (visible when published)</p>
+          </div>
         </div>
       )}
 

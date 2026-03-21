@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import useCourseStore from '../../store/courseStore';
 import useAuthStore from '../../store/authStore';
 import ProgressBar from '../../components/common/ProgressBar';
+import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -27,7 +28,6 @@ import {
   HiOutlinePuzzle,
   HiOutlineDownload,
   HiOutlineLink,
-  HiOutlineAcademicCap,
 } from 'react-icons/hi';
 
 const LearningPage = () => {
@@ -57,9 +57,20 @@ const LearningPage = () => {
   // Course completion
   const [showCompletion, setShowCompletion] = useState(false);
 
+  const fetchProgress = async () => {
+    try {
+      const res = await API.get(`/progress/${id}`);
+      setProgress(res.data.data);
+      setCompletedIds(res.data.data.completedContentIds || []);
+    } catch (_err) {
+      // Not enrolled yet
+    }
+  };
+
   useEffect(() => {
     fetchCourse(id);
     fetchProgress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -70,19 +81,11 @@ const LearningPage = () => {
     }
   }, [searchParams, currentCourse]);
 
-  const fetchProgress = async () => {
-    try {
-      const res = await API.get(`/progress/${id}`);
-      setProgress(res.data.data);
-      setCompletedIds(res.data.data.completedContentIds || []);
-    } catch (err) { }
-  };
-
   const course = currentCourse;
   const lessons = course?.lessons || [];
   const currentLesson = lessons[currentLessonIndex];
   const quizzes = course?.quizzes || [];
-  const currentQuiz = quizzes[0]; // First quiz for now
+  const currentQuiz = quizzes[0];
 
   const totalItems = lessons.length + (currentQuiz ? 1 : 0);
   const completedCount = completedIds.length + (progress?.quizCompleted ? 1 : 0);
@@ -103,9 +106,7 @@ const LearningPage = () => {
       }));
       toast.success('Lesson completed! ✅');
 
-      // Check if all done
-      const newCompleted = nextCompletedIds;
-      if (newCompleted.length === lessons.length && (progress?.quizCompleted || !currentQuiz)) {
+      if (nextCompletedIds.length === lessons.length && (progress?.quizCompleted || !currentQuiz)) {
         setShowCompletion(true);
       }
     } catch (err) {
@@ -141,7 +142,6 @@ const LearningPage = () => {
       setCurrentQuestion(currentQuestion + 1);
       setSelectedOption(null);
     } else {
-      // Quiz complete
       const correctAnswers = newAnswers.reduce((sum, ans, i) => {
         return sum + (ans === currentQuiz.questions[i].correctAnswer ? 1 : 0);
       }, 0);
@@ -162,17 +162,14 @@ const LearningPage = () => {
       setEarnedPoints(points);
       setShowReward(true);
 
-      // Update user points
       updateUser({ points: (user?.points || 0) + points });
 
-      // Update progress
       setProgress((prev) => ({
         ...prev,
         ...res.data.data,
         completedContentIds: prev?.completedContentIds || completedIds,
       }));
 
-      // Check course completion
       if (completedIds.length === lessons.length) {
         setTimeout(() => setShowCompletion(true), 2000);
       }
@@ -200,8 +197,7 @@ const LearningPage = () => {
 
   if (!course) return <LoadingSpinner size="lg" text="Loading..." />;
 
-  // Determine what to show in the main area
-  const isShowingQuiz = currentLessonIndex >= lessons.length; // After all lessons = quiz
+  const isShowingQuiz = currentLessonIndex >= lessons.length;
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -225,13 +221,11 @@ const LearningPage = () => {
         {/* Sidebar */}
         {sidebarOpen && (
           <div className="w-80 bg-white border-r border-gray-100 flex flex-col overflow-y-auto flex-shrink-0 animate-fade-in">
-            {/* Progress */}
             <div className="p-4 border-b border-gray-100">
               <ProgressBar progress={progressPercent} size="sm" />
               <p className="text-xs text-gray-500 mt-2">{completedCount}/{totalItems} completed</p>
             </div>
 
-            {/* Lessons */}
             <div className="flex-1 overflow-y-auto">
               {lessons.map((lesson, i) => (
                 <div key={lesson._id || i}>
@@ -264,9 +258,9 @@ const LearningPage = () => {
                   {lesson.attachments?.length > 0 && currentLessonIndex === i && (
                     <div className="px-12 pb-2 space-y-1">
                       {lesson.attachments.map((att, j) => (
-                        <a key={j} href={resolveMediaUrl(att)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-600">
+                        <a key={j} href={resolveMediaUrl(att.url || att)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-600">
                           <HiOutlineLink className="w-3 h-3" />
-                          <span className="truncate">Attachment {j + 1}</span>
+                          <span className="truncate">{att.title || att.originalName || `Attachment ${j + 1}`}</span>
                         </a>
                       ))}
                     </div>
@@ -365,9 +359,9 @@ const LearningPage = () => {
                   <p className="text-sm font-semibold text-gray-700 mb-2">📎 Additional Resources</p>
                   <div className="space-y-2">
                     {currentLesson.attachments.map((att, i) => (
-                      <a key={i} href={resolveMediaUrl(att)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700">
+                      <a key={i} href={resolveMediaUrl(att.url || att)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700">
                         <HiOutlineLink className="w-4 h-4" />
-                        {att}
+                        {att.title || att.originalName || `Attachment ${i + 1}`}
                       </a>
                     ))}
                   </div>
@@ -426,7 +420,6 @@ const LearningPage = () => {
               {/* Quiz Questions */}
               {quizStarted && !quizCompleted && currentQuiz.questions?.[currentQuestion] && (
                 <div className="card-elevated p-8 animate-scale-in">
-                  {/* Question header */}
                   <div className="flex items-center justify-between mb-6">
                     <Badge variant="primary">
                       Question {currentQuestion + 1} of {currentQuiz.questions.length}
@@ -438,12 +431,10 @@ const LearningPage = () => {
                     />
                   </div>
 
-                  {/* Question */}
                   <h3 className="text-lg font-bold text-gray-800 mb-6">
                     {currentQuiz.questions[currentQuestion].question}
                   </h3>
 
-                  {/* Options */}
                   <div className="space-y-3 mb-8">
                     {currentQuiz.questions[currentQuestion].options.map((option, i) => (
                       <button
@@ -469,7 +460,6 @@ const LearningPage = () => {
                     ))}
                   </div>
 
-                  {/* Action */}
                   <div className="flex justify-end">
                     <button
                       onClick={handleQuizProceed}
@@ -493,9 +483,27 @@ const LearningPage = () => {
                   <p className="text-gray-500 mb-4">
                     You scored {quizScore}/{currentQuiz.questions.length}
                   </p>
-                  <button onClick={() => navigate(`/courses/${id}`)} className="btn-primary">
-                    Back to Course
-                  </button>
+                  <p className="text-xs text-gray-400 mb-6">
+                    Multiple attempts are allowed — points decrease with each attempt.
+                  </p>
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      onClick={() => {
+                        setQuizCompleted(false);
+                        setQuizStarted(false);
+                        setCurrentQuestion(0);
+                        setSelectedOption(null);
+                        setQuizAnswers([]);
+                        setQuizScore(0);
+                      }}
+                      className="btn-secondary flex items-center gap-2"
+                    >
+                      🔄 Try Again
+                    </button>
+                    <button onClick={() => navigate(`/courses/${id}`)} className="btn-primary">
+                      Back to Course
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -566,26 +574,3 @@ function extractYoutubeId(url) {
 }
 
 export default LearningPage;
-
-/*
-============================================
-BACKEND API REQUIRED:
-============================================
-
-POST   /api/progress/:courseId/complete-lesson
-Body: { lessonId: "..." }
-→ Add lessonId to completedContentIds array
-→ Recalculate progressPercent
-
-POST   /api/progress/:courseId/complete-quiz
-Body: { quizId, answers: [selectedOptionIndex...], score }
-→ Calculate points based on attempt number and quiz rewards
-→ Add points to user's total
-→ Return: { pointsEarned, attemptNumber, totalPoints }
-
-POST   /api/progress/:courseId/complete-course
-→ Mark course as fully completed
-→ Set completedDate, status = "completed"
-
-============================================
-*/
