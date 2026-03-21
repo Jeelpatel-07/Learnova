@@ -1,3 +1,4 @@
+const Lesson = require("../models/Lesson");
 const Course = require("../models/Course");
 const {
   isCloudinaryConfigured,
@@ -7,10 +8,7 @@ const {
 const VALID_TYPES = ["Video", "Document", "Image"];
 
 const normalizeAttachment = (attachment) => {
-  if (typeof attachment === "string") {
-    return { title: "", url: attachment.trim() };
-  }
-
+  if (typeof attachment === "string") return { title: "", url: attachment.trim() };
   return {
     title: attachment?.title?.trim?.() || "",
     url: attachment?.url?.trim?.() || "",
@@ -20,7 +18,7 @@ const normalizeAttachment = (attachment) => {
   };
 };
 
-const buildLesson = (payload) => ({
+const buildLessonData = (payload) => ({
   title: payload.title?.trim?.() || "",
   type: payload.type,
   fileUrl: payload.fileUrl?.trim?.() || "",
@@ -32,168 +30,78 @@ const buildLesson = (payload) => ({
   description: payload.description?.trim?.() || "",
   responsible: payload.responsible?.trim?.() || "",
   attachments: Array.isArray(payload.attachments)
-    ? payload.attachments.map(normalizeAttachment).filter((attachment) => attachment.url)
+    ? payload.attachments.map(normalizeAttachment).filter((a) => a.url)
     : [],
 });
 
-const validateLesson = (lesson) => {
-  if (!lesson.title) {
-    return "Lesson title is required";
-  }
-  if (!lesson.type || !VALID_TYPES.includes(lesson.type)) {
-    return "Lesson type must be Video, Document, or Image";
-  }
-  return null;
-};
-
 const addLesson = async (req, res) => {
   try {
-    const { id } = req.params;
-    const lesson = buildLesson(req.body);
-    const validationError = validateLesson(lesson);
-
-    if (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: validationError,
-      });
-    }
-
+    const { id } = req.params; // courseId
     const course = await Course.findById(id);
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: "Course not found",
-      });
+    if (!course) return res.status(404).json({ success: false, message: "Course not found" });
+
+    const data = buildLessonData(req.body);
+    if (!data.title) return res.status(400).json({ success: false, message: "Lesson title is required" });
+    if (!data.type || !VALID_TYPES.includes(data.type)) {
+      return res.status(400).json({ success: false, message: "Lesson type must be Video, Document, or Image" });
     }
 
-    course.lessons.push(lesson);
-    await course.save();
+    // Get next order number
+    const lastLesson = await Lesson.findOne({ courseId: id }).sort({ order: -1 });
+    data.order = lastLesson ? lastLesson.order + 1 : 0;
+    data.courseId = id;
 
-    res.status(201).json({
-      success: true,
-      message: "Lesson added successfully",
-      data: course.lessons[course.lessons.length - 1],
-    });
+    const lesson = await Lesson.create(data);
+
+    res.status(201).json({ success: true, message: "Lesson added successfully", data: lesson });
   } catch (error) {
     console.error("Add Lesson Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Server error while adding lesson",
-    });
+    res.status(500).json({ success: false, message: "Server error while adding lesson" });
   }
 };
 
 const updateLesson = async (req, res) => {
   try {
     const { id, lessonId } = req.params;
-    const course = await Course.findById(id);
+    const lesson = await Lesson.findOne({ _id: lessonId, courseId: id });
+    if (!lesson) return res.status(404).json({ success: false, message: "Lesson not found in this course" });
 
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: "Course not found",
-      });
+    const updates = buildLessonData({ ...lesson.toObject(), ...req.body });
+    if (!updates.title) return res.status(400).json({ success: false, message: "Lesson title is required" });
+    if (!updates.type || !VALID_TYPES.includes(updates.type)) {
+      return res.status(400).json({ success: false, message: "Lesson type must be Video, Document, or Image" });
     }
 
-    const lesson = course.lessons.id(lessonId);
-    if (!lesson) {
-      return res.status(404).json({
-        success: false,
-        message: "Lesson not found in this course",
-      });
-    }
+    Object.assign(lesson, updates);
+    await lesson.save();
 
-    const nextLesson = buildLesson({
-      ...lesson.toObject(),
-      ...req.body,
-      attachments:
-        req.body.attachments === undefined ? lesson.attachments : req.body.attachments,
-    });
-
-    const validationError = validateLesson(nextLesson);
-    if (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: validationError,
-      });
-    }
-
-    Object.assign(lesson, nextLesson);
-    await course.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Lesson updated successfully",
-      data: lesson,
-    });
+    res.status(200).json({ success: true, message: "Lesson updated successfully", data: lesson });
   } catch (error) {
     console.error("Update Lesson Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Server error while updating lesson",
-    });
+    res.status(500).json({ success: false, message: "Server error while updating lesson" });
   }
 };
 
 const deleteLesson = async (req, res) => {
   try {
     const { id, lessonId } = req.params;
-    const course = await Course.findById(id);
+    const lesson = await Lesson.findOneAndDelete({ _id: lessonId, courseId: id });
+    if (!lesson) return res.status(404).json({ success: false, message: "Lesson not found in this course" });
 
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: "Course not found",
-      });
-    }
-
-    const lesson = course.lessons.id(lessonId);
-    if (!lesson) {
-      return res.status(404).json({
-        success: false,
-        message: "Lesson not found in this course",
-      });
-    }
-
-    course.lessons.pull({ _id: lessonId });
-    await course.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Lesson deleted successfully",
-    });
+    res.status(200).json({ success: true, message: "Lesson deleted successfully" });
   } catch (error) {
     console.error("Delete Lesson Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Server error while deleting lesson",
-    });
+    res.status(500).json({ success: false, message: "Server error while deleting lesson" });
   }
 };
 
 const uploadLessonMedia = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Please upload a file",
-      });
-    }
-
-    if (!isCloudinaryConfigured()) {
-      return res.status(500).json({
-        success: false,
-        message: "Cloudinary is not configured on the backend",
-      });
-    }
+    if (!req.file) return res.status(400).json({ success: false, message: "Please upload a file" });
+    if (!isCloudinaryConfigured()) return res.status(500).json({ success: false, message: "Cloudinary is not configured" });
 
     const resourceType = req.body.resourceType || "auto";
-    const uploaded = await uploadBufferToCloudinary(
-      req.file,
-      "learnova/course-assets",
-      resourceType
-    );
+    const uploaded = await uploadBufferToCloudinary(req.file, "learnova/course-assets", resourceType);
 
     res.status(200).json({
       success: true,
@@ -207,16 +115,8 @@ const uploadLessonMedia = async (req, res) => {
     });
   } catch (error) {
     console.error("Upload Lesson Media Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Server error while uploading lesson media",
-    });
+    res.status(500).json({ success: false, message: "Server error while uploading lesson media" });
   }
 };
 
-module.exports = {
-  addLesson,
-  updateLesson,
-  deleteLesson,
-  uploadLessonMedia,
-};
+module.exports = { addLesson, updateLesson, deleteLesson, uploadLessonMedia };

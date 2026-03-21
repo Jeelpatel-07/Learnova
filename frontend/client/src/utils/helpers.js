@@ -34,8 +34,8 @@ export const calculateQuizPercentage = (correctAnswers, totalQuestions) => {
   return Math.round((correctAnswers / totalQuestions) * 100);
 };
 
-export const hasCompletedLesson = (completedContentIds = [], lessonId) =>
-  completedContentIds.some((id) => String(id) === String(lessonId));
+export const hasCompletedLesson = (completedLessons = [], lessonId) =>
+  completedLessons.some((id) => String(id) === String(lessonId));
 
 export const getBadgeForPoints = (points) => {
   let badge = BADGE_LEVELS[0];

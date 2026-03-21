@@ -61,7 +61,7 @@ const LearningPage = () => {
     try {
       const res = await API.get(`/progress/${id}`);
       setProgress(res.data.data);
-      setCompletedIds(res.data.data.completedContentIds || []);
+      setCompletedIds(res.data.data.completedLessons || []);
     } catch (_err) {
       // Not enrolled yet
     }
@@ -88,7 +88,7 @@ const LearningPage = () => {
   const currentQuiz = quizzes[0];
 
   const totalItems = lessons.length + (currentQuiz ? 1 : 0);
-  const completedCount = completedIds.length + (progress?.quizCompleted ? 1 : 0);
+  const completedCount = completedIds.length + (progress?.completedQuizzes?.length || 0);
   const progressPercent = calculateProgress(completedCount, totalItems);
 
   const isCompleted = (lessonId) => hasCompletedLesson(completedIds, lessonId);
@@ -97,16 +97,16 @@ const LearningPage = () => {
     if (isCompleted(lessonId)) return;
     try {
       const res = await API.post(`/progress/${id}/complete-lesson`, { lessonId });
-      const nextCompletedIds = res.data.data.completedContentIds || [...completedIds, lessonId];
+      const nextCompletedIds = res.data.data.completedLessons || [...completedIds, lessonId];
       setCompletedIds(nextCompletedIds);
       setProgress((prev) => ({
         ...prev,
         ...res.data.data,
-        completedContentIds: nextCompletedIds,
+        completedLessons: nextCompletedIds,
       }));
       toast.success('Lesson completed! ✅');
 
-      if (nextCompletedIds.length === lessons.length && (progress?.quizCompleted || !currentQuiz)) {
+      if (nextCompletedIds.length === lessons.length && ((progress?.completedQuizzes?.length > 0) || !currentQuiz)) {
         setShowCompletion(true);
       }
     } catch (err) {
@@ -167,7 +167,7 @@ const LearningPage = () => {
       setProgress((prev) => ({
         ...prev,
         ...res.data.data,
-        completedContentIds: prev?.completedContentIds || completedIds,
+        completedLessons: prev?.completedLessons || completedIds,
       }));
 
       if (completedIds.length === lessons.length) {
@@ -185,7 +185,7 @@ const LearningPage = () => {
       setProgress((prev) => ({
         ...prev,
         ...res.data.data,
-        completedContentIds: prev?.completedContentIds || completedIds,
+        completedLessons: prev?.completedLessons || completedIds,
       }));
       toast.success('🎉 Course Completed! Congratulations!');
       setShowCompletion(false);
@@ -276,7 +276,7 @@ const LearningPage = () => {
                     isShowingQuiz ? 'bg-purple-50 border-r-2 border-purple-500' : 'hover:bg-gray-50'
                   }`}
                 >
-                  {progress?.quizCompleted ? (
+                  {progress?.completedQuizzes?.length > 0 ? (
                     <HiOutlineCheckCircle className="w-5 h-5 text-indigo-500 flex-shrink-0" />
                   ) : (
                     <div className="w-5 h-5 rounded-full border-2 border-purple-300 flex-shrink-0" />

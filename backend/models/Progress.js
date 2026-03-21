@@ -1,7 +1,6 @@
 // ==============================================
-// PROGRESS MODEL (UPDATED)
+// PROGRESS MODEL (REDESIGNED)
 // Tracks each learner's progress in a course
-// Matches the exact fields requested
 // ==============================================
 
 const mongoose = require("mongoose");
@@ -13,56 +12,66 @@ const progressSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
       required: true,
     },
-    completedContentIds: [
+
+    // IDs of completed lessons (from Lesson collection)
+    completedLessons: [
       {
         type: mongoose.Schema.Types.ObjectId,
+        ref: "Lesson",
       },
     ],
-    quizCompleted: {
-      type: Boolean,
-      default: false,
-    },
-    quizAttempts: {
-      type: Number,
-      default: 0,
-    },
-    score: {
-      type: Number,
-      default: 0,
-    },
+
+    // IDs of completed quizzes (from Quiz collection)
+    completedQuizzes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Quiz",
+      },
+    ],
+
     progressPercent: {
       type: Number,
       default: 0,
+      min: 0,
+      max: 100,
     },
-    enrolledDate: {
-      type: Date,
-      default: Date.now,
-    },
-    startDate: {
-      type: Date,
-      default: null,
-    },
-    completedDate: {
-      type: Date,
-      default: null,
-    },
+
     status: {
       type: String,
       enum: ["YetToStart", "InProgress", "Completed"],
       default: "YetToStart",
     },
+
+    enrolledDate: {
+      type: Date,
+      default: Date.now,
+    },
+
+    startDate: {
+      type: Date,
+      default: null,
+    },
+
+    completedDate: {
+      type: Date,
+      default: null,
+    },
+
     timeSpent: {
       type: Number,
       default: 0,
       min: 0,
     },
+
     lastLessonId: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: "Lesson",
       default: null,
     },
   },
@@ -71,8 +80,10 @@ const progressSchema = new mongoose.Schema(
   }
 );
 
-// Ensure one progress record per user per course
+// One progress record per user per course
 progressSchema.index({ userId: 1, courseId: 1 }, { unique: true });
+// For reporting: filter by course + status
+progressSchema.index({ courseId: 1, status: 1 });
 
 const Progress = mongoose.model("Progress", progressSchema);
 

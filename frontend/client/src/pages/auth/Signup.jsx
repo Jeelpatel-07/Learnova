@@ -209,6 +209,12 @@ const Signup = () => {
               Sign in
             </Link>
           </p>
+          <p className="text-center text-xs text-gray-400 mt-2">
+            Admin?{' '}
+            <Link to="/admin-signup" className="text-slate-600 font-semibold hover:text-slate-800">
+              Register as Admin →
+            </Link>
+          </p>
         </div>
       </div>
     </div>

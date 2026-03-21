@@ -1,55 +1,64 @@
+// ==============================================
+// USER MODEL
+// Stores user accounts with role-based access
+// ==============================================
+
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "Name is required"],
-    trim: true,
-  },
-
-  email: {
-    type: String,
-    required: [true, "Email is required"],
-    unique: true,
-    lowercase: true,
-    trim: true,
-  },
-
-  password: {
-    type: String,
-    required: [true, "Password is required"],
-    minlength: [6, "Password must be at least 6 characters"],
-  },
-
-  role: {
-    type: String,
-    enum: ["Admin", "Instructor", "Learner"],
-    default: "Learner",
-  },
-
-  points: {
-    type: Number,
-    default: 0,
-  },
-
-  enrolledCourses: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Name is required"],
+      trim: true,
     },
-  ],
 
-  createdAt: {
-    type: Date,
-    default: Date.now,
+    email: {
+      type: String,
+      required: [true, "Email is required"],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/\S+@\S+\.\S+/, "Please provide a valid email"],
+    },
+
+    password: {
+      type: String,
+      required: [true, "Password is required"],
+      minlength: [6, "Password must be at least 6 characters"],
+    },
+
+    role: {
+      type: String,
+      enum: ["Admin", "Instructor", "Learner"],
+      default: "Learner",
+    },
+
+    points: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    avatar: {
+      type: String,
+      default: "",
+    },
   },
-});
+  {
+    timestamps: true,
+  }
+);
+
+// Index for fast email lookups
+userSchema.index({ email: 1 }, { unique: true });
+// Index for role-based queries
+userSchema.index({ role: 1 });
 
 // Hash password before saving
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
-
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });

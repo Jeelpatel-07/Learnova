@@ -90,7 +90,6 @@ const addReview = async (req, res) => {
       { userId, courseId },
       {
         userId,
-        userName,
         courseId,
         rating,
         comment: comment || "",

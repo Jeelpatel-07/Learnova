@@ -155,8 +155,8 @@ const Login = () => {
           </p>
           <p className="text-center text-xs text-gray-400 mt-2">
             Admin?{' '}
-            <Link to="/admin-signup" className="text-gray-500 hover:text-indigo-600 font-medium">
-              Register as Admin
+            <Link to="/admin-signup" className="text-slate-600 font-semibold hover:text-slate-800">
+              Register as Admin →
             </Link>
           </p>
         </div>

@@ -101,7 +101,7 @@ const CourseDetail = () => {
   };
 
   const isLessonCompleted = (lessonId) => {
-    return hasCompletedLesson(progress?.completedContentIds, lessonId);
+    return hasCompletedLesson(progress?.completedLessons, lessonId);
   };
 
   const avgRating = reviews.length > 0
@@ -116,7 +116,7 @@ const CourseDetail = () => {
   if (loading && !course) return <LoadingSpinner size="lg" text="Loading course..." />;
   if (!course) return <div className="page-container text-center text-gray-500">Course not found</div>;
 
-  const completedCount = progress?.completedContentIds?.length || 0;
+  const completedCount = progress?.completedLessons?.length || 0;
   const totalCount = course.lessons?.length || 0;
   const progressPercent = progress?.progressPercent || 0;
 
@@ -227,7 +227,7 @@ const CourseDetail = () => {
                   <div>
                     {completed ? (
                       <HiOutlineCheckCircle className="w-6 h-6 text-indigo-500" />
-                    ) : progress?.completedContentIds?.length > 0 && i <= (progress.completedContentIds.length) ? (
+                    ) : progress?.completedLessons?.length > 0 && i <= (progress.completedLessons.length) ? (
                       <div className="w-6 h-6 rounded-full border-2 border-indigo-400 flex items-center justify-center">
                         <div className="w-2 h-2 bg-indigo-400 rounded-full" />
                       </div>
