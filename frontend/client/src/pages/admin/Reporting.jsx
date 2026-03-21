@@ -3,7 +3,7 @@ import API from '../../api/axios';
 import SearchBar from '../../components/common/SearchBar';
 import Badge from '../../components/common/Badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { formatDate } from '../../utils/helpers';
+import { formatDate, formatDuration } from '../../utils/helpers';
 import {
   HiOutlineUsers,
   HiOutlineClock,
@@ -14,49 +14,45 @@ import {
 
 const Reporting = () => {
   const [stats, setStats] = useState({ total: 0, yetToStart: 0, inProgress: 0, completed: 0 });
-  const [progress, setProgress] = useState([]);
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [showColumns, setShowColumns] = useState(false);
   const [columns, setColumns] = useState({
-    srNo: true, course: true, participant: true,
-    completion: true, status: true,
+    srNo: true,
+    courseName: true,
+    participantName: true,
+    enrolledDate: true,
+    startDate: true,
+    timeSpent: true,
+    completionPercentage: true,
+    completedDate: true,
+    status: true,
   });
 
   useEffect(() => {
+    const fetchReporting = async () => {
+      try {
+        const res = await API.get('/reporting');
+        const data = res.data.data;
+        setStats({
+          total: data.totalParticipants || 0,
+          yetToStart: data.yetToStart || 0,
+          inProgress: data.inProgress || 0,
+          completed: data.completed || 0,
+        });
+        setRows(data.table || []);
+      } catch (err) {
+        setStats({ total: 0, yetToStart: 0, inProgress: 0, completed: 0 });
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchReporting();
   }, []);
-
-  const fetchReporting = async () => {
-    try {
-      const res = await API.get('/reporting');
-      const data = res.data.data;
-      // Map backend response shape to component state
-      // Backend returns: { totalParticipants, yetToStart, inProgress, completed, table: [{userName, course, progressPercent, status}] }
-      setStats({
-        total: data.totalParticipants || 0,
-        yetToStart: data.yetToStart || 0,
-        inProgress: data.inProgress || 0,
-        completed: data.completed || 0,
-      });
-      // Map table data to component format
-      const mappedProgress = (data.table || []).map((item, index) => ({
-        id: index + 1,
-        course: item.course || 'Unknown Course',
-        participant: item.userName || 'Unknown User',
-        completion: item.progressPercent || 0,
-        status: item.status || 'YetToStart',
-      }));
-      setProgress(mappedProgress);
-    } catch (err) {
-      console.error('Reporting fetch error:', err);
-      setStats({ total: 0, yetToStart: 0, inProgress: 0, completed: 0 });
-      setProgress([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const overviewCards = [
     { key: 'all', label: 'Total Participants', value: stats.total, icon: HiOutlineUsers, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-200' },
@@ -65,18 +61,31 @@ const Reporting = () => {
     { key: 'Completed', label: 'Completed', value: stats.completed, icon: HiOutlineCheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-200' },
   ];
 
-  const filteredProgress = progress.filter((p) => {
-    if (filter !== 'all' && p.status !== filter) return false;
-    if (search && !p.course.toLowerCase().includes(search.toLowerCase()) && !p.participant.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
+  const filteredRows = rows.filter((row) => {
+    if (filter !== 'all' && row.status !== filter) return false;
+
+    const haystack = [
+      row.courseName,
+      row.participantName,
+      row.participantEmail,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return haystack.includes(search.toLowerCase());
   });
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'Completed': return <Badge variant="success">Completed</Badge>;
-      case 'InProgress': return <Badge variant="info">In Progress</Badge>;
-      case 'YetToStart': return <Badge variant="warning">Yet to Start</Badge>;
-      default: return <Badge variant="gray">{status}</Badge>;
+      case 'Completed':
+        return <Badge variant="success">Completed</Badge>;
+      case 'InProgress':
+        return <Badge variant="info">In Progress</Badge>;
+      case 'YetToStart':
+        return <Badge variant="warning">Yet to Start</Badge>;
+      default:
+        return <Badge variant="gray">{status}</Badge>;
     }
   };
 
@@ -89,7 +98,6 @@ const Reporting = () => {
         <p className="text-sm text-gray-500 mt-1">Track learner progress across courses</p>
       </div>
 
-      {/* Overview Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {overviewCards.map((card, i) => (
           <button
@@ -113,7 +121,6 @@ const Reporting = () => {
         ))}
       </div>
 
-      {/* Table Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <SearchBar value={search} onChange={setSearch} placeholder="Search courses or participants..." />
         <div className="relative">
@@ -123,14 +130,14 @@ const Reporting = () => {
           {showColumns && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowColumns(false)} />
-              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-20 animate-scale-in">
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-3 z-20 animate-scale-in">
                 <p className="text-xs font-semibold text-gray-500 mb-2">SHOW/HIDE COLUMNS</p>
-                {Object.entries(columns).map(([key, val]) => (
+                {Object.entries(columns).map(([key, value]) => (
                   <label key={key} className="flex items-center gap-2 py-1.5 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={val}
-                      onChange={() => setColumns({ ...columns, [key]: !val })}
+                      checked={value}
+                      onChange={() => setColumns({ ...columns, [key]: !value })}
                       className="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500"
                     />
                     <span className="text-sm text-gray-700 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
@@ -142,42 +149,54 @@ const Reporting = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="card overflow-hidden animate-fade-in">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 {columns.srNo && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">#</th>}
-                {columns.course && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Course</th>}
-                {columns.participant && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Participant</th>}
-                {columns.completion && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Progress</th>}
+                {columns.courseName && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Course Name</th>}
+                {columns.participantName && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Participant</th>}
+                {columns.enrolledDate && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Enrolled</th>}
+                {columns.startDate && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Started</th>}
+                {columns.timeSpent && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Time Spent</th>}
+                {columns.completionPercentage && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Progress</th>}
+                {columns.completedDate && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Completed</th>}
                 {columns.status && <th className="text-left text-xs font-semibold text-gray-500 px-6 py-3">Status</th>}
               </tr>
             </thead>
             <tbody>
-              {filteredProgress.map((row, i) => (
+              {filteredRows.map((row, i) => (
                 <tr key={row.id || i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  {columns.srNo && <td className="px-6 py-4 text-sm text-gray-500">{i + 1}</td>}
-                  {columns.course && <td className="px-6 py-4 text-sm font-semibold text-gray-800">{row.course}</td>}
-                  {columns.participant && <td className="px-6 py-4 text-sm text-gray-700">{row.participant}</td>}
-                  {columns.completion && (
+                  {columns.srNo && <td className="px-6 py-4 text-sm text-gray-500">{row.srNo || i + 1}</td>}
+                  {columns.courseName && <td className="px-6 py-4 text-sm font-semibold text-gray-800">{row.courseName}</td>}
+                  {columns.participantName && (
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      <div>{row.participantName}</div>
+                      {row.participantEmail && <div className="text-xs text-gray-400">{row.participantEmail}</div>}
+                    </td>
+                  )}
+                  {columns.enrolledDate && <td className="px-6 py-4 text-sm text-gray-600">{formatDate(row.enrolledDate)}</td>}
+                  {columns.startDate && <td className="px-6 py-4 text-sm text-gray-600">{formatDate(row.startDate)}</td>}
+                  {columns.timeSpent && <td className="px-6 py-4 text-sm text-gray-600">{formatDuration(row.timeSpent)}</td>}
+                  {columns.completionPercentage && (
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${row.completion}%` }} />
+                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${row.completionPercentage}%` }} />
                         </div>
-                        <span className="text-xs font-medium text-gray-600">{row.completion}%</span>
+                        <span className="text-xs font-medium text-gray-600">{row.completionPercentage}%</span>
                       </div>
                     </td>
                   )}
+                  {columns.completedDate && <td className="px-6 py-4 text-sm text-gray-600">{formatDate(row.completedDate)}</td>}
                   {columns.status && <td className="px-6 py-4">{getStatusBadge(row.status)}</td>}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {filteredProgress.length === 0 && (
+        {filteredRows.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <HiOutlineUsers className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>No data found</p>

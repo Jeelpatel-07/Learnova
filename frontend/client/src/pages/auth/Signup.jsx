@@ -13,7 +13,13 @@ import toast from 'react-hot-toast';
 import { getPostAuthRoute } from '../../utils/helpers';
 
 const Signup = () => {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Learner' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'Learner',
+  });
   const [showPassword, setShowPassword] = useState(false);
   const { signup, loading, error, clearError } = useAuthStore();
   const navigate = useNavigate();
@@ -25,9 +31,21 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     clearError();
+
+    if (form.password !== form.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/.test(form.password)) {
+      toast.error('Use 8+ chars with upper, lower, and special character');
+      return;
+    }
+
     try {
-      const user = await signup(form);
-      toast.success(`Welcome to Learnova, ${user.name}! 🚀`);
+      const { confirmPassword, ...payload } = form;
+      const user = await signup(payload);
+      toast.success(`Welcome to Learnova, ${user.name}!`);
       navigate(getPostAuthRoute(user.role));
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Signup failed');
@@ -36,7 +54,6 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-purple-600 to-indigo-700 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-32 left-16 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
@@ -50,25 +67,16 @@ const Signup = () => {
             <span className="text-3xl font-bold">Learnova</span>
           </div>
           <h1 className="text-4xl font-bold mb-4 leading-tight">
-            Start your<br />learning journey.
+            Start your
+            <br />
+            learning journey.
           </h1>
           <p className="text-lg text-white/70 max-w-md">
-            Join thousands of learners and instructors. Create courses, earn badges, and level up your skills.
+            Join learners and instructors, build skills, and track progress in one place.
           </p>
-
-          <div className="mt-12 space-y-4">
-            {['🎯 Gamified learning with points & badges', '📚 Video, document & quiz lessons', '📊 Track your progress in real-time'].map(
-              (item, i) => (
-                <div key={i} className="flex items-center gap-3 text-white/80">
-                  <span className="text-lg">{item}</span>
-                </div>
-              )
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md animate-slide-up">
           <div className="lg:hidden flex items-center gap-2.5 mb-8 justify-center">
@@ -125,10 +133,10 @@ const Signup = () => {
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="Min. 6 characters"
+                  placeholder="Use 8+ chars with upper, lower, and special character"
                   className="input-field pl-11 pr-11"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
                 <button
                   type="button"
@@ -141,11 +149,27 @@ const Signup = () => {
             </div>
 
             <div>
+              <label className="input-label">Confirm Password</label>
+              <div className="relative">
+                <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Re-enter your password"
+                  className="input-field pl-11"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
               <label className="input-label">I want to</label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: 'Learner', label: '📚 Learn', desc: 'Browse & take courses' },
-                  { value: 'Instructor', label: '🎓 Teach', desc: 'Create & manage courses' },
+                  { value: 'Learner', label: 'Learn', desc: 'Browse and take courses' },
+                  { value: 'Instructor', label: 'Teach', desc: 'Create and manage courses' },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -175,17 +199,7 @@ const Signup = () => {
               disabled={loading}
               className="btn-primary w-full py-3 text-base disabled:opacity-50"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Creating account...
-                </span>
-              ) : (
-                'Create account'
-              )}
+              {loading ? 'Creating account...' : 'Create account'}
             </button>
           </form>
 

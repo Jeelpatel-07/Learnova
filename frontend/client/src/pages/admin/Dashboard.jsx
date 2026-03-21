@@ -105,7 +105,7 @@ const Dashboard = () => {
         </span>
         <span className="flex items-center gap-1">
           <HiOutlineClock className="w-3.5 h-3.5" />
-          {formatDuration(0)}
+          {formatDuration(course.durationMinutes)}
         </span>
       </div>
 
@@ -252,7 +252,7 @@ const Dashboard = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{course.lessons?.length || 0}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{formatDuration(0)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{formatDuration(course.durationMinutes)}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{course.views || 0}</td>
                   <td className="px-6 py-4">
                     <Badge variant={course.published ? 'success' : 'gray'}>

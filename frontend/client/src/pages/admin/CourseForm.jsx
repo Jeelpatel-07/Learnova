@@ -45,6 +45,10 @@ const CourseForm = () => {
     updateQuiz,
     deleteQuiz,
     uploadCourseImage,
+    uploadCourseAsset,
+    fetchUsers,
+    addAttendees,
+    contactAttendees,
     loading,
   } = useCourseStore();
   const [activeTab, setActiveTab] = useState('content');
@@ -56,11 +60,18 @@ const CourseForm = () => {
   const [deleteType, setDeleteType] = useState('lesson');
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [menuOpen, setMenuOpen] = useState(null);
+  const [showAttendeeModal, setShowAttendeeModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const [contactForm, setContactForm] = useState({ subject: '', message: '' });
+  const [uploadingLessonFile, setUploadingLessonFile] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   // Lesson form state
   const [lessonForm, setLessonForm] = useState({
     title: '', type: 'Video', description: '', fileUrl: '', duration: '',
-    allowDownload: false, attachments: [],
+    allowDownload: false, attachments: [], responsible: '', filePublicId: '', fileResourceType: '', fileOriginalName: '',
   });
   const [lessonTab, setLessonTab] = useState('content');
 
@@ -79,6 +90,14 @@ const CourseForm = () => {
   useEffect(() => {
     if (currentCourse) setCourse(currentCourse);
   }, [currentCourse]);
+
+  useEffect(() => {
+    if (showAttendeeModal) {
+      fetchUsers()
+        .then((users) => setAvailableUsers(users))
+        .catch(() => toast.error('Failed to load users'));
+    }
+  }, [showAttendeeModal, fetchUsers]);
 
   const handleUpdateCourse = async (field, value) => {
     const updated = { ...course, [field]: value };
@@ -105,6 +124,10 @@ const CourseForm = () => {
       toast.error('Lesson title is required');
       return;
     }
+    if ((lessonForm.type === 'Document' || lessonForm.type === 'Image') && !lessonForm.fileUrl.trim()) {
+      toast.error(`Please upload or paste a ${lessonForm.type.toLowerCase()} file first`);
+      return;
+    }
     try {
       if (editingLesson) {
         await updateLesson(id, editingLesson._id, lessonForm);
@@ -129,10 +152,6 @@ const CourseForm = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Failed to delete');
     }
-  };
-
-  const handleUnsupportedFeature = (featureName) => {
-    toast.error(`${featureName} is not available because the backend does not expose that API.`);
   };
 
   const handleSaveQuiz = async () => {
@@ -169,7 +188,19 @@ const CourseForm = () => {
   };
 
   const resetLessonForm = () => {
-    setLessonForm({ title: '', type: 'Video', description: '', fileUrl: '', duration: '', allowDownload: false, attachments: [] });
+    setLessonForm({
+      title: '',
+      type: 'Video',
+      description: '',
+      fileUrl: '',
+      duration: '',
+      allowDownload: false,
+      attachments: [],
+      responsible: '',
+      filePublicId: '',
+      fileResourceType: '',
+      fileOriginalName: '',
+    });
     setEditingLesson(null);
     setLessonTab('content');
   };
@@ -194,8 +225,88 @@ const CourseForm = () => {
       duration: lesson.duration || '',
       allowDownload: lesson.allowDownload || false,
       attachments: lesson.attachments || [],
+      responsible: lesson.responsible || '',
+      filePublicId: lesson.filePublicId || '',
+      fileResourceType: lesson.fileResourceType || '',
+      fileOriginalName: lesson.fileOriginalName || '',
     });
     setShowLessonModal(true);
+  };
+
+  const handleUploadLessonFile = async (file, resourceType) => {
+    setUploadingLessonFile(true);
+    try {
+      const uploaded = await uploadCourseAsset(id, file, resourceType);
+      setLessonForm((prev) => ({
+        ...prev,
+        fileUrl: uploaded.url,
+        filePublicId: uploaded.publicId,
+        fileResourceType: uploaded.resourceType,
+        fileOriginalName: uploaded.originalName,
+      }));
+      toast.success('File uploaded successfully');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to upload file');
+    } finally {
+      setUploadingLessonFile(false);
+    }
+  };
+
+  const handleUploadAttachment = async (file) => {
+    setUploadingAttachment(true);
+    try {
+      const uploaded = await uploadCourseAsset(id, file, 'raw');
+    setLessonForm((prev) => ({
+      ...prev,
+      attachments: [
+        ...prev.attachments,
+        {
+          title: uploaded.originalName,
+          url: uploaded.url,
+          publicId: uploaded.publicId,
+          resourceType: uploaded.resourceType,
+          originalName: uploaded.originalName,
+        },
+      ],
+      }));
+      toast.success('Attachment uploaded');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to upload attachment');
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const handleAddAttendees = async () => {
+    if (!selectedUserIds.length) {
+      toast.error('Select at least one attendee');
+      return;
+    }
+
+    try {
+      await addAttendees(id, { userIds: selectedUserIds });
+      toast.success('Attendees updated');
+      setSelectedUserIds([]);
+      setShowAttendeeModal(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to add attendees');
+    }
+  };
+
+  const handleContactAttendees = async () => {
+    if (!contactForm.message.trim()) {
+      toast.error('Message is required');
+      return;
+    }
+
+    try {
+      await contactAttendees(id, contactForm);
+      toast.success('Message saved for attendees');
+      setContactForm({ subject: '', message: '' });
+      setShowContactModal(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to contact attendees');
+    }
   };
 
   const openEditQuiz = (quiz) => {
@@ -320,7 +431,11 @@ const CourseForm = () => {
               <HiOutlineEye className="w-4 h-4 mr-1.5 inline" /> Preview
             </button>
 
-            <button onClick={() => handleUnsupportedFeature('Contact attendees')} className="btn-secondary text-sm py-2">
+            <button onClick={() => setShowAttendeeModal(true)} className="btn-secondary text-sm py-2">
+              <HiOutlinePlus className="w-4 h-4 mr-1.5 inline" /> Attendees
+            </button>
+
+            <button onClick={() => setShowContactModal(true)} className="btn-secondary text-sm py-2">
               <HiOutlineMail className="w-4 h-4 mr-1.5 inline" /> Contact
             </button>
           </div>
@@ -510,9 +625,16 @@ const CourseForm = () => {
               type="text"
               value={course.responsible || ''}
               onChange={(e) => handleUpdateCourse('responsible', e.target.value)}
-              placeholder="Select a responsible person"
+              placeholder="Responsible person name"
               className="input-field max-w-md"
             />
+          </div>
+
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="text-sm font-semibold text-gray-700">Attendees</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {course.attendees?.length || 0} enrolled, {course.invitedUsers?.length || 0} invited
+            </p>
           </div>
         </div>
       )}
@@ -645,6 +767,16 @@ const CourseForm = () => {
                     placeholder="15"
                   />
                 </div>
+                <div>
+                  <label className="input-label">Responsible</label>
+                  <input
+                    type="text"
+                    value={lessonForm.responsible}
+                    onChange={(e) => setLessonForm({ ...lessonForm, responsible: e.target.value })}
+                    className="input-field"
+                    placeholder="Instructor or content owner"
+                  />
+                </div>
               </>
             )}
 
@@ -652,11 +784,33 @@ const CourseForm = () => {
               <>
                 <div>
                   <label className="input-label">Upload {lessonForm.type === 'Document' ? 'Document' : 'Image'}</label>
-                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors cursor-pointer">
+                  <label className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors cursor-pointer block">
                     <HiOutlineUpload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
-                    <input type="file" className="hidden" accept={lessonForm.type === 'Image' ? 'image/*' : '.pdf,.doc,.docx,.ppt,.pptx'} />
-                  </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept={lessonForm.type === 'Image' ? 'image/*' : '.pdf,.doc,.docx,.ppt,.pptx'}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleUploadLessonFile(file, lessonForm.type === 'Image' ? 'image' : 'raw');
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  {uploadingLessonFile && (
+                    <p className="text-sm text-indigo-600 mt-2">Uploading file...</p>
+                  )}
+                  {lessonForm.fileUrl && (
+                    <div className="mt-3 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
+                      <p className="text-sm font-medium text-emerald-700">Uploaded and attached</p>
+                      <p className="text-xs text-emerald-600 mt-1 break-all">
+                        {lessonForm.fileOriginalName || lessonForm.fileUrl}
+                      </p>
+                    </div>
+                  )}
                   <p className="text-xs text-gray-400 mt-2">Or paste a URL:</p>
                   <input
                     type="url"
@@ -664,6 +818,16 @@ const CourseForm = () => {
                     onChange={(e) => setLessonForm({ ...lessonForm, fileUrl: e.target.value })}
                     className="input-field mt-1"
                     placeholder="https://example.com/file.pdf"
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Responsible</label>
+                  <input
+                    type="text"
+                    value={lessonForm.responsible}
+                    onChange={(e) => setLessonForm({ ...lessonForm, responsible: e.target.value })}
+                    className="input-field"
+                    placeholder="Instructor or content owner"
                   />
                 </div>
                 <div className="flex items-center gap-3">
@@ -700,15 +864,21 @@ const CourseForm = () => {
                 <HiOutlineLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <input
                   type="text"
-                  value={att}
+                  value={typeof att === 'string' ? att : att.url}
                   onChange={(e) => {
                     const newAtt = [...lessonForm.attachments];
-                    newAtt[i] = e.target.value;
+                    const currentValue = typeof newAtt[i] === 'string' ? { title: '', url: newAtt[i] } : newAtt[i];
+                    newAtt[i] = { ...currentValue, url: e.target.value };
                     setLessonForm({ ...lessonForm, attachments: newAtt });
                   }}
                   className="flex-1 bg-transparent outline-none text-sm"
                   placeholder="URL or file name"
                 />
+                {typeof att !== 'string' && att.originalName && (
+                  <span className="text-xs text-emerald-600 whitespace-nowrap">
+                    {att.originalName}
+                  </span>
+                )}
                 <button
                   onClick={() => setLessonForm({ ...lessonForm, attachments: lessonForm.attachments.filter((_, j) => j !== i) })}
                   className="text-red-400 hover:text-red-600"
@@ -718,11 +888,28 @@ const CourseForm = () => {
               </div>
             ))}
             <button
-              onClick={() => setLessonForm({ ...lessonForm, attachments: [...lessonForm.attachments, ''] })}
+              onClick={() => setLessonForm({
+                ...lessonForm,
+                attachments: [...lessonForm.attachments, { title: '', url: '', publicId: '', resourceType: 'raw', originalName: '' }],
+              })}
               className="btn-secondary text-sm"
             >
               <HiOutlinePlus className="w-4 h-4 mr-1 inline" /> Add Attachment
             </button>
+            <label className="btn-secondary text-sm inline-flex items-center cursor-pointer">
+              <HiOutlineUpload className="w-4 h-4 mr-1 inline" /> {uploadingAttachment ? 'Uploading...' : 'Upload Attachment'}
+              <input
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleUploadAttachment(file);
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
           </div>
         )}
 
@@ -742,6 +929,16 @@ const CourseForm = () => {
         title={editingQuiz ? 'Edit Quiz' : 'Quiz Builder'}
         size="xl"
       >
+        <div className="mb-5">
+          <label className="input-label">Quiz Title *</label>
+          <input
+            type="text"
+            value={quizForm.title}
+            onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })}
+            className="input-field"
+            placeholder="Enter quiz title"
+          />
+        </div>
         <div className="flex gap-6 min-h-[500px]">
           {/* Left Panel - Question List */}
           <div className="w-56 border-r border-gray-100 pr-4 space-y-2 flex-shrink-0">
@@ -877,6 +1074,78 @@ const CourseForm = () => {
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
           <button onClick={() => { setShowQuizBuilder(false); resetQuizForm(); }} className="btn-secondary">Cancel</button>
           <button onClick={handleSaveQuiz} className="btn-primary">{editingQuiz ? 'Update Quiz' : 'Save Quiz'}</button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showAttendeeModal}
+        onClose={() => setShowAttendeeModal(false)}
+        title="Add Attendees"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">Select learners or instructors to invite to this course.</p>
+          <div className="max-h-80 overflow-y-auto space-y-2">
+            {availableUsers.map((userOption) => (
+              <label key={userOption._id} className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedUserIds.includes(userOption._id)}
+                  onChange={() => {
+                    setSelectedUserIds((prev) =>
+                      prev.includes(userOption._id)
+                        ? prev.filter((idValue) => idValue !== userOption._id)
+                        : [...prev, userOption._id]
+                    );
+                  }}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{userOption.name}</p>
+                  <p className="text-xs text-gray-500">{userOption.email} • {userOption.role}</p>
+                </div>
+              </label>
+            ))}
+            {availableUsers.length === 0 && (
+              <p className="text-sm text-gray-400">No users available</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setShowAttendeeModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={handleAddAttendees} className="btn-primary">Save Attendees</button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        title="Contact Attendees"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="input-label">Subject</label>
+            <input
+              type="text"
+              value={contactForm.subject}
+              onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+              className="input-field"
+              placeholder="Course update"
+            />
+          </div>
+          <div>
+            <label className="input-label">Message</label>
+            <textarea
+              value={contactForm.message}
+              onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+              className="input-field min-h-[180px]"
+              placeholder="Write your message to attendees"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setShowContactModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={handleContactAttendees} className="btn-primary">Save Message</button>
+          </div>
         </div>
       </Modal>
 

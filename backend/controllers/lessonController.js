@@ -1,49 +1,64 @@
-// ==============================================
-// LESSON CONTROLLER
-// Manages lessons INSIDE the Course document
-// Uses MongoDB $push, $pull, and positional $
-// ==============================================
-
 const Course = require("../models/Course");
+const {
+  isCloudinaryConfigured,
+  uploadBufferToCloudinary,
+} = require("../utils/cloudinary");
 
-// ==============================================
-// ADD LESSON
-// POST /api/courses/:id/lessons
-//
-// Body example:
-// {
-//   "title": "Introduction to JavaScript",
-//   "type": "Video",
-//   "fileUrl": "https://example.com/video.mp4",
-//   "duration": "15 mins",
-//   "allowDownload": true,
-//   "description": "Welcome to the course",
-//   "attachments": ["file1.pdf", "file2.pdf"]
-// }
-// ==============================================
+const VALID_TYPES = ["Video", "Document", "Image"];
+
+const normalizeAttachment = (attachment) => {
+  if (typeof attachment === "string") {
+    return { title: "", url: attachment.trim() };
+  }
+
+  return {
+    title: attachment?.title?.trim?.() || "",
+    url: attachment?.url?.trim?.() || "",
+    publicId: attachment?.publicId?.trim?.() || "",
+    resourceType: attachment?.resourceType?.trim?.() || "raw",
+    originalName: attachment?.originalName?.trim?.() || "",
+  };
+};
+
+const buildLesson = (payload) => ({
+  title: payload.title?.trim?.() || "",
+  type: payload.type,
+  fileUrl: payload.fileUrl?.trim?.() || "",
+  filePublicId: payload.filePublicId?.trim?.() || "",
+  fileResourceType: payload.fileResourceType?.trim?.() || "",
+  fileOriginalName: payload.fileOriginalName?.trim?.() || "",
+  duration: Number(payload.duration) || 0,
+  allowDownload: Boolean(payload.allowDownload),
+  description: payload.description?.trim?.() || "",
+  responsible: payload.responsible?.trim?.() || "",
+  attachments: Array.isArray(payload.attachments)
+    ? payload.attachments.map(normalizeAttachment).filter((attachment) => attachment.url)
+    : [],
+});
+
+const validateLesson = (lesson) => {
+  if (!lesson.title) {
+    return "Lesson title is required";
+  }
+  if (!lesson.type || !VALID_TYPES.includes(lesson.type)) {
+    return "Lesson type must be Video, Document, or Image";
+  }
+  return null;
+};
+
 const addLesson = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, type, fileUrl, duration, allowDownload, description, attachments } = req.body;
+    const lesson = buildLesson(req.body);
+    const validationError = validateLesson(lesson);
 
-    // Validate required fields
-    if (!title || !type) {
+    if (validationError) {
       return res.status(400).json({
         success: false,
-        message: "Lesson title and type are required",
+        message: validationError,
       });
     }
 
-    // Validate lesson type
-    const validTypes = ["Video", "Document", "Image"];
-    if (!validTypes.includes(type)) {
-      return res.status(400).json({
-        success: false,
-        message: "Lesson type must be Video, Document, or Image",
-      });
-    }
-
-    // Find the course
     const course = await Course.findById(id);
     if (!course) {
       return res.status(404).json({
@@ -52,31 +67,13 @@ const addLesson = async (req, res) => {
       });
     }
 
-    // Build the lesson object
-    const newLesson = {
-      title,
-      type,
-      fileUrl: fileUrl || "",
-      duration: duration || "",
-      allowDownload: allowDownload || false,
-      description: description || "",
-      attachments: attachments || [],
-    };
-
-    // Use $push to add lesson to the lessons array
-    const updatedCourse = await Course.findByIdAndUpdate(
-      id,
-      { $push: { lessons: newLesson } },
-      { new: true, runValidators: true }
-    );
-
-    // Get the newly added lesson (last item in array)
-    const addedLesson = updatedCourse.lessons[updatedCourse.lessons.length - 1];
+    course.lessons.push(lesson);
+    await course.save();
 
     res.status(201).json({
       success: true,
       message: "Lesson added successfully",
-      data: addedLesson,
+      data: course.lessons[course.lessons.length - 1],
     });
   } catch (error) {
     console.error("Add Lesson Error:", error.message);
@@ -87,19 +84,11 @@ const addLesson = async (req, res) => {
   }
 };
 
-// ==============================================
-// UPDATE LESSON
-// PUT /api/courses/:id/lessons/:lessonId
-//
-// Updates specific fields of a lesson
-// ==============================================
 const updateLesson = async (req, res) => {
   try {
     const { id, lessonId } = req.params;
-    const { title, type, fileUrl, duration, allowDownload, description, attachments } = req.body;
-
-    // Find the course
     const course = await Course.findById(id);
+
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -107,7 +96,6 @@ const updateLesson = async (req, res) => {
       });
     }
 
-    // Find the lesson inside the course
     const lesson = course.lessons.id(lessonId);
     if (!lesson) {
       return res.status(404).json({
@@ -116,25 +104,22 @@ const updateLesson = async (req, res) => {
       });
     }
 
-    // Update only the fields that are provided
-    if (title !== undefined) lesson.title = title;
-    if (type !== undefined) {
-      const validTypes = ["Video", "Document", "Image"];
-      if (!validTypes.includes(type)) {
-        return res.status(400).json({
-          success: false,
-          message: "Lesson type must be Video, Document, or Image",
-        });
-      }
-      lesson.type = type;
-    }
-    if (fileUrl !== undefined) lesson.fileUrl = fileUrl;
-    if (duration !== undefined) lesson.duration = duration;
-    if (allowDownload !== undefined) lesson.allowDownload = allowDownload;
-    if (description !== undefined) lesson.description = description;
-    if (attachments !== undefined) lesson.attachments = attachments;
+    const nextLesson = buildLesson({
+      ...lesson.toObject(),
+      ...req.body,
+      attachments:
+        req.body.attachments === undefined ? lesson.attachments : req.body.attachments,
+    });
 
-    // Save the course (which saves the embedded lesson)
+    const validationError = validateLesson(nextLesson);
+    if (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError,
+      });
+    }
+
+    Object.assign(lesson, nextLesson);
     await course.save();
 
     res.status(200).json({
@@ -151,18 +136,11 @@ const updateLesson = async (req, res) => {
   }
 };
 
-// ==============================================
-// DELETE LESSON
-// DELETE /api/courses/:id/lessons/:lessonId
-//
-// Uses $pull to remove lesson from array
-// ==============================================
 const deleteLesson = async (req, res) => {
   try {
     const { id, lessonId } = req.params;
-
-    // Find the course
     const course = await Course.findById(id);
+
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -170,7 +148,6 @@ const deleteLesson = async (req, res) => {
       });
     }
 
-    // Check if lesson exists
     const lesson = course.lessons.id(lessonId);
     if (!lesson) {
       return res.status(404).json({
@@ -179,10 +156,8 @@ const deleteLesson = async (req, res) => {
       });
     }
 
-    // Use $pull to remove the lesson from the array
-    await Course.findByIdAndUpdate(id, {
-      $pull: { lessons: { _id: lessonId } },
-    });
+    course.lessons.pull({ _id: lessonId });
+    await course.save();
 
     res.status(200).json({
       success: true,
@@ -197,8 +172,51 @@ const deleteLesson = async (req, res) => {
   }
 };
 
+const uploadLessonMedia = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a file",
+      });
+    }
+
+    if (!isCloudinaryConfigured()) {
+      return res.status(500).json({
+        success: false,
+        message: "Cloudinary is not configured on the backend",
+      });
+    }
+
+    const resourceType = req.body.resourceType || "auto";
+    const uploaded = await uploadBufferToCloudinary(
+      req.file,
+      "learnova/course-assets",
+      resourceType
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "File uploaded successfully",
+      data: {
+        url: uploaded.secure_url,
+        publicId: uploaded.public_id,
+        resourceType: uploaded.resource_type,
+        originalName: req.file.originalname,
+      },
+    });
+  } catch (error) {
+    console.error("Upload Lesson Media Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Server error while uploading lesson media",
+    });
+  }
+};
+
 module.exports = {
   addLesson,
   updateLesson,
   deleteLesson,
+  uploadLessonMedia,
 };

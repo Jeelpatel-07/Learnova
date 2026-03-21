@@ -86,27 +86,26 @@ const addReview = async (req, res) => {
       });
     }
 
-    // Check if user already reviewed this course
-    const existingReview = await Review.findOne({ userId, courseId });
-    if (existingReview) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already reviewed this course",
-      });
-    }
-
-    // Create the review
-    const review = await Review.create({
-      userId,
-      userName,
-      courseId,
-      rating,
-      comment: comment || "",
-    });
+    const review = await Review.findOneAndUpdate(
+      { userId, courseId },
+      {
+        userId,
+        userName,
+        courseId,
+        rating,
+        comment: comment || "",
+      },
+      {
+        new: true,
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      }
+    );
 
     res.status(201).json({
       success: true,
-      message: "Review submitted successfully",
+      message: "Review saved successfully",
       data: review,
     });
   } catch (error) {
