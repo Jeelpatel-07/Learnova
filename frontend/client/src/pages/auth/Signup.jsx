@@ -12,7 +12,7 @@ import {
 import toast from 'react-hot-toast';
 
 const Signup = () => {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'learner' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Learner' });
   const [showPassword, setShowPassword] = useState(false);
   const { signup, loading, error, clearError } = useAuthStore();
   const navigate = useNavigate();
@@ -27,13 +27,13 @@ const Signup = () => {
     try {
       const user = await signup(form);
       toast.success(`Welcome to Learnova, ${user.name}! 🚀`);
-      if (user.role === 'admin' || user.role === 'instructor') {
+      if (user.role === 'Admin' || user.role === 'Instructor') {
         navigate('/admin/dashboard');
       } else {
         navigate('/my-courses');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Signup failed');
+      toast.error(err.response?.data?.message || err.message || 'Signup failed');
     }
   };
 
@@ -147,8 +147,8 @@ const Signup = () => {
               <label className="input-label">I want to</label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: 'learner', label: '📚 Learn', desc: 'Browse & take courses' },
-                  { value: 'instructor', label: '🎓 Teach', desc: 'Create & manage courses' },
+                  { value: 'Learner', label: '📚 Learn', desc: 'Browse & take courses' },
+                  { value: 'Instructor', label: '🎓 Teach', desc: 'Create & manage courses' },
                 ].map((option) => (
                   <button
                     key={option.value}

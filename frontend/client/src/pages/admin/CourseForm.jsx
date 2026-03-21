@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import API from '../../api/axios';
 import useCourseStore from '../../store/courseStore';
 import useUiStore from '../../store/uiStore';
 import Modal from '../../components/common/Modal';
@@ -34,7 +35,7 @@ import {
 const CourseForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentCourse, fetchCourse, updateCourse, togglePublish, addLesson, updateLesson, deleteLesson, loading } = useCourseStore();
+  const { currentCourse, fetchCourse, updateCourse, togglePublish, addLesson, updateLesson, deleteLesson, uploadCourseImage, loading } = useCourseStore();
   const [activeTab, setActiveTab] = useState('content');
   const [course, setCourse] = useState(null);
   const [showLessonModal, setShowLessonModal] = useState(false);
@@ -49,7 +50,7 @@ const CourseForm = () => {
 
   // Lesson form state
   const [lessonForm, setLessonForm] = useState({
-    title: '', type: 'video', description: '', fileUrl: '', duration: '',
+    title: '', type: 'Video', description: '', fileUrl: '', duration: '',
     allowDownload: false, attachments: [],
   });
   const [lessonTab, setLessonTab] = useState('content');
@@ -58,7 +59,7 @@ const CourseForm = () => {
   const [quizForm, setQuizForm] = useState({
     title: '',
     questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }],
-    rewards: { firstAttempt: 20, secondAttempt: 15, thirdAttempt: 10, fourthAndMore: 5 },
+    rewards: { firstAttempt: 100, secondAttempt: 75, thirdAttempt: 50, fourthAndMore: 25 },
   });
   const [activeQuestion, setActiveQuestion] = useState(0);
 
@@ -135,15 +136,7 @@ const CourseForm = () => {
 
   const handleSaveQuiz = async () => {
     try {
-      // Quiz save API call
-      const res = await fetch(`http://localhost:5000/api/courses/${id}/quizzes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('learnova_token')}`,
-        },
-        body: JSON.stringify(quizForm),
-      });
+      await API.post(`/courses/${id}/quizzes`, quizForm);
       toast.success('Quiz saved! 🧠');
       setShowQuizBuilder(false);
       fetchCourse(id);
@@ -153,7 +146,7 @@ const CourseForm = () => {
   };
 
   const resetLessonForm = () => {
-    setLessonForm({ title: '', type: 'video', description: '', fileUrl: '', duration: '', allowDownload: false, attachments: [] });
+    setLessonForm({ title: '', type: 'Video', description: '', fileUrl: '', duration: '', allowDownload: false, attachments: [] });
     setEditingLesson(null);
     setLessonTab('content');
   };
@@ -174,10 +167,9 @@ const CourseForm = () => {
 
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'video': return <HiOutlineVideoCamera className="w-4 h-4 text-red-500" />;
-      case 'document': return <HiOutlineDocumentText className="w-4 h-4 text-blue-500" />;
-      case 'image': return <HiImage className="w-4 h-4 text-green-500" />;
-      case 'quiz': return <HiOutlinePuzzle className="w-4 h-4 text-purple-500" />;
+      case 'Video': return <HiOutlineVideoCamera className="w-4 h-4 text-red-500" />;
+      case 'Document': return <HiOutlineDocumentText className="w-4 h-4 text-blue-500" />;
+      case 'Image': return <HiImage className="w-4 h-4 text-green-500" />;
       default: return null;
     }
   };
@@ -216,14 +208,15 @@ const CourseForm = () => {
             </div>
             <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl cursor-pointer transition-opacity">
               <HiOutlineUpload className="w-6 h-6 text-white" />
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                // Handle file upload for course image
+              <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                  // Upload logic - send to backend
-                  const formData = new FormData();
-                  formData.append('image', file);
-                  toast.success('Image uploaded!');
+                  try {
+                    await uploadCourseImage(id, file);
+                    toast.success('Image uploaded!');
+                  } catch (err) {
+                    toast.error('Failed to upload image');
+                  }
                 }
               }} />
             </label>
@@ -406,8 +399,8 @@ const CourseForm = () => {
             <label className="input-label">Show course to</label>
             <div className="grid grid-cols-2 gap-3 mt-2">
               {[
-                { value: 'everyone', label: 'Everyone', icon: HiOutlineGlobeAlt, desc: 'Visible to all visitors' },
-                { value: 'signed_in', label: 'Signed In', icon: HiOutlineLockClosed, desc: 'Only logged-in users' },
+                { value: 'Everyone', label: 'Everyone', icon: HiOutlineGlobeAlt, desc: 'Visible to all visitors' },
+                { value: 'SignedIn', label: 'Signed In', icon: HiOutlineLockClosed, desc: 'Only logged-in users' },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -429,9 +422,9 @@ const CourseForm = () => {
             <label className="input-label">Access Rule</label>
             <div className="grid grid-cols-3 gap-3 mt-2">
               {[
-                { value: 'open', label: 'Open', icon: HiOutlineGlobeAlt, desc: 'Anyone can start' },
-                { value: 'invitation', label: 'On Invitation', icon: HiOutlineMail, desc: 'Invited users only' },
-                { value: 'payment', label: 'On Payment', icon: HiOutlineCreditCard, desc: 'Paid access' },
+                { value: 'Open', label: 'Open', icon: HiOutlineGlobeAlt, desc: 'Anyone can start' },
+                { value: 'Invitation', label: 'On Invitation', icon: HiOutlineMail, desc: 'Invited users only' },
+                { value: 'Paid', label: 'On Payment', icon: HiOutlineCreditCard, desc: 'Paid access' },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -449,7 +442,7 @@ const CourseForm = () => {
           </div>
 
           {/* Price field (conditional) */}
-          {course.accessRule === 'payment' && (
+          {course.accessRule === 'Paid' && (
             <div>
               <label className="input-label">Price</label>
               <div className="relative max-w-xs">
@@ -566,9 +559,9 @@ const CourseForm = () => {
               <label className="input-label">Type</label>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { value: 'video', label: 'Video', icon: HiOutlineVideoCamera, color: 'text-red-500' },
-                  { value: 'document', label: 'Document', icon: HiOutlineDocumentText, color: 'text-blue-500' },
-                  { value: 'image', label: 'Image', icon: HiImage, color: 'text-green-500' },
+                  { value: 'Video', label: 'Video', icon: HiOutlineVideoCamera, color: 'text-red-500' },
+                  { value: 'Document', label: 'Document', icon: HiOutlineDocumentText, color: 'text-blue-500' },
+                  { value: 'Image', label: 'Image', icon: HiImage, color: 'text-green-500' },
                 ].map((t) => (
                   <button
                     key={t.value}
@@ -585,7 +578,7 @@ const CourseForm = () => {
             </div>
 
             {/* Type-specific fields */}
-            {lessonForm.type === 'video' && (
+            {lessonForm.type === 'Video' && (
               <>
                 <div>
                   <label className="input-label">Video URL (YouTube/Drive)</label>
@@ -610,14 +603,14 @@ const CourseForm = () => {
               </>
             )}
 
-            {(lessonForm.type === 'document' || lessonForm.type === 'image') && (
+            {(lessonForm.type === 'Document' || lessonForm.type === 'Image') && (
               <>
                 <div>
-                  <label className="input-label">Upload {lessonForm.type === 'document' ? 'Document' : 'Image'}</label>
+                  <label className="input-label">Upload {lessonForm.type === 'Document' ? 'Document' : 'Image'}</label>
                   <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors cursor-pointer">
                     <HiOutlineUpload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
-                    <input type="file" className="hidden" accept={lessonForm.type === 'image' ? 'image/*' : '.pdf,.doc,.docx,.ppt,.pptx'} />
+                    <input type="file" className="hidden" accept={lessonForm.type === 'Image' ? 'image/*' : '.pdf,.doc,.docx,.ppt,.pptx'} />
                   </div>
                   <p className="text-xs text-gray-400 mt-2">Or paste a URL:</p>
                   <input

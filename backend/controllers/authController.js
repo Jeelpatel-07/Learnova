@@ -12,7 +12,10 @@ const generateToken = require("../utils/generateToken");
 // ==============================================
 const signup = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email: rawEmail, password, role: rawRole } = req.body;
+    const email = rawEmail?.trim().toLowerCase();
+    const allowedRoles = ["Admin", "Instructor", "Learner"];
+    const role = allowedRoles.includes(rawRole) ? rawRole : "Learner";
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -36,7 +39,7 @@ const signup = async (req, res) => {
       name,
       email,
       password,
-      role: role || "Learner",
+      role,
     });
 
     // Generate token
@@ -58,7 +61,23 @@ const signup = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Signup Error:", error.message);
+    console.error("Signup Error:", error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "A user with this email already exists",
+      });
+    }
+
+    if (error.name === "ValidationError") {
+      const firstError = Object.values(error.errors)[0];
+      return res.status(400).json({
+        success: false,
+        message: firstError?.message || "Invalid signup data",
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: "Server error during signup",
@@ -72,7 +91,8 @@ const signup = async (req, res) => {
 // ==============================================
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email: rawEmail, password } = req.body;
+    const email = rawEmail?.trim().toLowerCase();
 
     // Validate required fields
     if (!email || !password) {

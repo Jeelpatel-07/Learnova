@@ -100,7 +100,7 @@ const Home = () => {
                     <HiOutlineAcademicCap className="w-16 h-16 text-indigo-200" />
                   </div>
                 )}
-                {course.accessRule === 'payment' && course.price && (
+                {course.accessRule === 'Paid' && course.price && (
                   <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow">
                     <span className="font-bold text-indigo-600">${course.price}</span>
                   </div>
@@ -129,8 +129,7 @@ const Home = () => {
                   </span>
                   <span className="flex items-center gap-1">
                     <HiOutlineClock className="w-3.5 h-3.5" />
-                    {course.totalDuration || 0}m
-                  </span>
+                    {course.lessons?.length || 0} lessons                  </span>
                   {course.rating && (
                     <span className="flex items-center gap-1">
                       <HiOutlineStar className="w-3.5 h-3.5 text-amber-400" />
@@ -142,7 +141,7 @@ const Home = () => {
                 <button className="w-full btn-primary text-sm py-2.5 flex items-center justify-center gap-2">
                   {!isAuthenticated ? (
                     <>Join Course <HiOutlineArrowRight className="w-4 h-4" /></>
-                  ) : course.accessRule === 'payment' ? (
+                  ) : course.accessRule === 'Paid' ? (
                     <>Buy Course <HiOutlineShoppingCart className="w-4 h-4" /></>
                   ) : (
                     <>Start Learning <HiOutlinePlay className="w-4 h-4" /></>
