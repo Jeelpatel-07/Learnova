@@ -163,98 +163,105 @@ const attendeeMessageSchema = new mongoose.Schema(
   { _id: true }
 );
 
-const courseSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: [true, "Course title is required"],
-    trim: true,
-  },
+const courseSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, "Course title is required"],
+      trim: true,
+    },
 
-  description: {
-    type: String,
-    default: "",
-  },
+    description: {
+      type: String,
+      default: "",
+    },
 
-  tags: {
-    type: [String],
-    default: [],
-  },
+    tags: {
+      type: [String],
+      default: [],
+    },
 
-  image: {
-    type: String,
-    default: "",
-  },
-  imagePublicId: {
-    type: String,
-    default: "",
-  },
+    image: {
+      type: String,
+      default: "",
+    },
+    imagePublicId: {
+      type: String,
+      default: "",
+    },
 
-  published: {
-    type: Boolean,
-    default: false,
-  },
+    published: {
+      type: Boolean,
+      default: false,
+    },
 
-  visibility: {
-    type: String,
-    enum: ["Everyone", "SignedIn"],
-    default: "Everyone",
-  },
+    website: {
+      type: String,
+      default: "",
+      trim: true,
+    },
 
-  accessRule: {
-    type: String,
-    enum: ["Open", "Invitation", "Paid"],
-    default: "Open",
-  },
+    visibility: {
+      type: String,
+      enum: ["Everyone", "SignedIn"],
+      default: "Everyone",
+    },
 
-  price: {
-    type: Number,
-    default: 0,
-  },
+    accessRule: {
+      type: String,
+      enum: ["Open", "Invitation", "Paid"],
+      default: "Open",
+    },
 
-  responsible: {
-    type: String,
-    default: "",
-  },
+    price: {
+      type: Number,
+      default: 0,
+    },
 
-  // Embedded lessons array
-  lessons: [lessonSchema],
+    responsible: {
+      type: String,
+      default: "",
+    },
 
-  // Embedded quizzes array
-  quizzes: [quizSchema],
+    // Embedded lessons array
+    lessons: [lessonSchema],
 
-  // Users enrolled in this course
-  attendees: [
-    {
+    // Embedded quizzes array
+    quizzes: [quizSchema],
+
+    // Users enrolled in this course
+    attendees: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    invitedUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    attendeeMessages: {
+      type: [attendeeMessageSchema],
+      default: [],
+    },
+
+    views: {
+      type: Number,
+      default: 0,
+    },
+
+    // Who created this course
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-  ],
-  invitedUsers: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-  ],
-  attendeeMessages: {
-    type: [attendeeMessageSchema],
-    default: [],
   },
-
-  views: {
-    type: Number,
-    default: 0,
-  },
-
-  // Who created this course
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-  },
-
-},
-{
-  timestamps: true,
-});
+  {
+    timestamps: true,
+  }
+);
 
 const Course = mongoose.model("Course", courseSchema);
 

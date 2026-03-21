@@ -20,7 +20,6 @@ const Navbar = () => {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const isAdminAreaUser = user?.role === 'Admin' || user?.role === 'Instructor';
-  const isAdmin = user?.role === 'Admin';
 
   const handleLogout = () => {
     logout();
@@ -31,7 +30,7 @@ const Navbar = () => {
     ? [
         { to: '/admin/dashboard', label: 'Dashboard', icon: HiOutlineChartBar },
         { to: '/admin/courses', label: 'Courses', icon: HiOutlineBookOpen },
-        ...(isAdmin ? [{ to: '/admin/reporting', label: 'Reporting', icon: HiOutlineChartBar }] : []),
+        ...(isAdminAreaUser ? [{ to: '/admin/reporting', label: 'Reporting', icon: HiOutlineChartBar }] : []),
       ]
     : [
         { to: '/', label: 'Home', icon: HiOutlineAcademicCap },

@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 // Auth
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
+import AdminSignup from './pages/auth/AdminSignup';
 
 // Admin
 import AdminLayout from './pages/admin/AdminLayout';
@@ -47,6 +48,7 @@ function App() {
         {/* Auth Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/admin-signup" element={<AdminSignup />} />
 
         {/* Admin Routes */}
         <Route
@@ -63,7 +65,7 @@ function App() {
           <Route
             path="reporting"
             element={
-              <ProtectedRoute roles={['Admin']}>
+              <ProtectedRoute roles={['Admin', 'Instructor']}>
                 <Reporting />
               </ProtectedRoute>
             }

@@ -20,6 +20,7 @@ import {
   HiOutlineAcademicCap,
   HiOutlineUsers,
   HiOutlineChartBar,
+  HiOutlineTrash,
 } from 'react-icons/hi';
 
 const Dashboard = () => {
@@ -59,6 +60,18 @@ const Dashboard = () => {
     const url = `${window.location.origin}/courses/${course._id}`;
     navigator.clipboard.writeText(url);
     toast.success('Course link copied! 📋');
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteCourse(deleteId);
+      toast.success('Course deleted');
+      setDeleteId(null);
+      fetchCourses();
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete course');
+    }
   };
 
   const stats = [
@@ -120,6 +133,9 @@ const Dashboard = () => {
         </Link>
         <button onClick={() => handleShare(course)} className="btn-secondary text-xs py-2 px-3">
           <HiOutlineShare className="w-3.5 h-3.5" />
+        </button>
+        <button onClick={() => setDeleteId(course._id)} className="text-xs py-2 px-3 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
+          <HiOutlineTrash className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
@@ -305,6 +321,17 @@ const Dashboard = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Delete Confirm */}
+      <ConfirmDialog
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Course"
+        message="Are you sure you want to delete this course? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 };
