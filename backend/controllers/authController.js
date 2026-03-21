@@ -55,7 +55,6 @@ const signup = async (req, res) => {
           email: user.email,
           role: user.role,
           points: user.points,
-          enrolledCourses: user.enrolledCourses,
           createdAt: user.createdAt,
         },
       },
@@ -126,7 +125,6 @@ const login = async (req, res) => {
           email: user.email,
           role: user.role,
           points: user.points,
-          enrolledCourses: user.enrolledCourses,
           createdAt: user.createdAt,
         },
       },
@@ -147,8 +145,7 @@ const login = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .select("-password")
-      .populate("enrolledCourses", "title image published");
+      .select("-password");
 
     res.status(200).json({
       success: true,

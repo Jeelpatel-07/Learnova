@@ -12,7 +12,8 @@ const hydrateProgress = async (course) => {
       ...course,
       progress: {
         ...progress,
-        completedLessons: progress.completedContentIds?.length || 0,
+        completedLessons: progress.completedLessons?.length || 0,
+        completedQuizzes: progress.completedQuizzes?.length || 0,
       },
     };
   } catch {
@@ -20,6 +21,7 @@ const hydrateProgress = async (course) => {
       ...course,
       progress: {
         completedLessons: 0,
+        completedQuizzes: 0,
         progressPercent: 0,
         status: 'YetToStart',
       },
