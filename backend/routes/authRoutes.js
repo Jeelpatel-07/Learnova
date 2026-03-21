@@ -22,7 +22,6 @@ router.post("/login", login);
 // Protected routes
 router.get("/me", protect, getMe);
 
-// Admin only
-router.get("/users", protect, authorize("Admin"), getAllUsers);
+router.get("/users", protect, authorize("Admin", "Instructor"), getAllUsers);
 
 module.exports = router;

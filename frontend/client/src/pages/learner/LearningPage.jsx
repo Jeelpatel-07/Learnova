@@ -119,6 +119,8 @@ const LearningPage = () => {
     }
     if (currentLessonIndex < lessons.length - 1) {
       setCurrentLessonIndex(currentLessonIndex + 1);
+    } else if (currentQuiz) {
+      setCurrentLessonIndex(lessons.length);
     }
   };
 
@@ -514,19 +516,19 @@ const LearningPage = () => {
           <div className="mb-4">
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-gray-500">
-                {getBadgeForPoints((user?.points || 0) + earnedPoints).icon}{' '}
-                {getBadgeForPoints((user?.points || 0) + earnedPoints).name}
+                {getBadgeForPoints(user?.points || 0).icon}{' '}
+                {getBadgeForPoints(user?.points || 0).name}
               </span>
-              {getNextBadge((user?.points || 0) + earnedPoints) && (
+              {getNextBadge(user?.points || 0) && (
                 <span className="text-gray-400">
-                  Next: {getNextBadge((user?.points || 0) + earnedPoints)?.name}
+                  Next: {getNextBadge(user?.points || 0)?.name}
                 </span>
               )}
             </div>
             <ProgressBar
               progress={
-                getNextBadge((user?.points || 0) + earnedPoints)
-                  ? (((user?.points || 0) + earnedPoints) / getNextBadge((user?.points || 0) + earnedPoints).points) * 100
+                getNextBadge(user?.points || 0)
+                  ? ((user?.points || 0) / getNextBadge(user?.points || 0).points) * 100
                   : 100
               }
               size="md"

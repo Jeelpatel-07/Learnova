@@ -6,6 +6,9 @@
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 
+const isStrongPassword = (password = "") =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
+
 // ==============================================
 // SIGNUP
 // POST /api/auth/signup
@@ -14,14 +17,21 @@ const signup = async (req, res) => {
   try {
     const { name, email: rawEmail, password, role: rawRole } = req.body;
     const email = rawEmail?.trim().toLowerCase();
-    const allowedRoles = ["Admin", "Instructor", "Learner"];
-    const role = allowedRoles.includes(rawRole) ? rawRole : "Learner";
+    const role = rawRole === "Instructor" ? "Instructor" : "Learner";
 
     // Validate required fields
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "Please provide name, email, and password",
+      });
+    }
+
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be at least 8 characters and include uppercase, lowercase, and a special character",
       });
     }
 
@@ -43,7 +53,7 @@ const signup = async (req, res) => {
     });
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user);
 
     res.status(201).json({
       success: true,
@@ -121,7 +131,7 @@ const login = async (req, res) => {
     }
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user);
 
     res.status(200).json({
       success: true,

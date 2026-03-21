@@ -33,13 +33,13 @@ export const LESSON_STATUS = {
 };
 
 export const BADGE_LEVELS = [
-  { name: 'Newbie', points: 0, icon: '🌱', color: 'bg-gray-100 text-gray-700' },
-  { name: 'Explorer', points: 50, icon: '🔍', color: 'bg-blue-100 text-blue-700' },
-  { name: 'Achiever', points: 150, icon: '⭐', color: 'bg-green-100 text-green-700' },
-  { name: 'Specialist', points: 300, icon: '🎯', color: 'bg-purple-100 text-purple-700' },
-  { name: 'Expert', points: 500, icon: '🏅', color: 'bg-orange-100 text-orange-700' },
-  { name: 'Master', points: 750, icon: '👑', color: 'bg-yellow-100 text-yellow-700' },
-  { name: 'Legend', points: 1000, icon: '🏆', color: 'bg-red-100 text-red-700' },
+  { name: 'Newbie', points: 0, icon: 'N', color: 'bg-gray-100 text-gray-700' },
+  { name: 'Explorer', points: 50, icon: 'E', color: 'bg-blue-100 text-blue-700' },
+  { name: 'Achiever', points: 150, icon: 'A', color: 'bg-green-100 text-green-700' },
+  { name: 'Specialist', points: 300, icon: 'S', color: 'bg-purple-100 text-purple-700' },
+  { name: 'Expert', points: 500, icon: 'X', color: 'bg-orange-100 text-orange-700' },
+  { name: 'Master', points: 750, icon: 'M', color: 'bg-yellow-100 text-yellow-700' },
+  { name: 'Legend', points: 1000, icon: 'L', color: 'bg-red-100 text-red-700' },
 ];
 
 export const DEFAULT_REWARDS = {
