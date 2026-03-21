@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import useAuthStore from '../../store/authStore';
-import { getInitials, getBadgeForPoints } from '../../utils/helpers';
+import { getInitials, getBadgeForPoints, getPostAuthRoute } from '../../utils/helpers';
 import {
   HiOutlineAcademicCap,
   HiOutlineBookOpen,
@@ -19,18 +19,19 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const isAdmin = user?.role === 'Admin' || user?.role === 'Instructor';
+  const isAdminAreaUser = user?.role === 'Admin' || user?.role === 'Instructor';
+  const isAdmin = user?.role === 'Admin';
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const navLinks = isAdmin
+  const navLinks = isAdminAreaUser
     ? [
         { to: '/admin/dashboard', label: 'Dashboard', icon: HiOutlineChartBar },
         { to: '/admin/courses', label: 'Courses', icon: HiOutlineBookOpen },
-        { to: '/admin/reporting', label: 'Reporting', icon: HiOutlineChartBar },
+        ...(isAdmin ? [{ to: '/admin/reporting', label: 'Reporting', icon: HiOutlineChartBar }] : []),
       ]
     : [
         { to: '/', label: 'Home', icon: HiOutlineAcademicCap },
@@ -43,7 +44,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to={isAdmin ? '/admin/dashboard' : '/'} className="flex items-center gap-2.5">
+          <Link to={isAdminAreaUser ? '/admin/dashboard' : '/'} className="flex items-center gap-2.5">
             <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
               <HiOutlineAcademicCap className="w-5 h-5 text-white" />
             </div>
@@ -102,12 +103,12 @@ const Navbar = () => {
                         )}
                       </div>
                       <Link
-                        to={isAdmin ? '/admin/dashboard' : '/my-courses'}
+                        to={getPostAuthRoute(user?.role)}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                         onClick={() => setProfileOpen(false)}
                       >
                         <HiOutlineUser className="w-4 h-4" />
-                        {isAdmin ? 'Dashboard' : 'My Courses'}
+                        {isAdminAreaUser ? 'Dashboard' : 'My Courses'}
                       </Link>
                       <button
                         onClick={handleLogout}

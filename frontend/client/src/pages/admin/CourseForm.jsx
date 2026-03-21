@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import API from '../../api/axios';
 import useCourseStore from '../../store/courseStore';
-import useUiStore from '../../store/uiStore';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Badge from '../../components/common/Badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { resolveMediaUrl } from '../../utils/helpers';
 import {
   HiOutlineEye,
-  HiOutlineUserAdd,
   HiOutlineMail,
   HiOutlinePhotograph,
   HiOutlineTrash,
@@ -35,18 +33,29 @@ import {
 const CourseForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentCourse, fetchCourse, updateCourse, togglePublish, addLesson, updateLesson, deleteLesson, uploadCourseImage, loading } = useCourseStore();
+  const {
+    currentCourse,
+    fetchCourse,
+    updateCourse,
+    togglePublish,
+    addLesson,
+    updateLesson,
+    deleteLesson,
+    addQuiz,
+    updateQuiz,
+    deleteQuiz,
+    uploadCourseImage,
+    loading,
+  } = useCourseStore();
   const [activeTab, setActiveTab] = useState('content');
   const [course, setCourse] = useState(null);
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
-  const [showAttendeeModal, setShowAttendeeModal] = useState(false);
-  const [showContactModal, setShowContactModal] = useState(false);
   const [showQuizBuilder, setShowQuizBuilder] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteType, setDeleteType] = useState('lesson');
+  const [editingQuiz, setEditingQuiz] = useState(null);
   const [menuOpen, setMenuOpen] = useState(null);
-  const [attendeeEmail, setAttendeeEmail] = useState('');
-  const [contactMessage, setContactMessage] = useState('');
 
   // Lesson form state
   const [lessonForm, setLessonForm] = useState({
@@ -77,7 +86,7 @@ const CourseForm = () => {
     try {
       await updateCourse(id, { [field]: value });
     } catch (err) {
-      toast.error('Failed to update');
+      toast.error(err.response?.data?.message || err.message || 'Failed to update');
     }
   };
 
@@ -87,7 +96,7 @@ const CourseForm = () => {
       setCourse(updated);
       toast.success(updated.published ? 'Course published! 🎉' : 'Course unpublished');
     } catch (err) {
-      toast.error('Failed to toggle publish');
+      toast.error(err.response?.data?.message || err.message || 'Failed to toggle publish');
     }
   };
 
@@ -108,7 +117,7 @@ const CourseForm = () => {
       resetLessonForm();
       fetchCourse(id);
     } catch (err) {
-      toast.error('Failed to save lesson');
+      toast.error(err.response?.data?.message || err.message || 'Failed to save lesson');
     }
   };
 
@@ -118,30 +127,44 @@ const CourseForm = () => {
       toast.success('Lesson deleted');
       fetchCourse(id);
     } catch (err) {
-      toast.error('Failed to delete');
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete');
     }
   };
 
-  const handleAddAttendee = async () => {
-    if (!attendeeEmail.trim()) return;
-    try {
-      await updateCourse(id, { addAttendee: attendeeEmail });
-      toast.success(`Invitation sent to ${attendeeEmail}`);
-      setAttendeeEmail('');
-      setShowAttendeeModal(false);
-    } catch (err) {
-      toast.error('Failed to add attendee');
-    }
+  const handleUnsupportedFeature = (featureName) => {
+    toast.error(`${featureName} is not available because the backend does not expose that API.`);
   };
 
   const handleSaveQuiz = async () => {
     try {
-      await API.post(`/courses/${id}/quizzes`, quizForm);
-      toast.success('Quiz saved! 🧠');
+      if (!quizForm.title.trim()) {
+        toast.error('Quiz title is required');
+        return;
+      }
+
+      if (editingQuiz) {
+        await updateQuiz(id, editingQuiz._id, quizForm);
+        toast.success('Quiz updated!');
+      } else {
+        await addQuiz(id, quizForm);
+        toast.success('Quiz saved! 🧠');
+      }
+
       setShowQuizBuilder(false);
+      resetQuizForm();
       fetchCourse(id);
     } catch (err) {
-      toast.error('Failed to save quiz');
+      toast.error(err.response?.data?.message || err.message || 'Failed to save quiz');
+    }
+  };
+
+  const handleDeleteQuiz = async (quizId) => {
+    try {
+      await deleteQuiz(id, quizId);
+      toast.success('Quiz deleted');
+      fetchCourse(id);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete quiz');
     }
   };
 
@@ -149,6 +172,16 @@ const CourseForm = () => {
     setLessonForm({ title: '', type: 'Video', description: '', fileUrl: '', duration: '', allowDownload: false, attachments: [] });
     setEditingLesson(null);
     setLessonTab('content');
+  };
+
+  const resetQuizForm = () => {
+    setQuizForm({
+      title: '',
+      questions: [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }],
+      rewards: { firstAttempt: 100, secondAttempt: 75, thirdAttempt: 50, fourthAndMore: 25 },
+    });
+    setEditingQuiz(null);
+    setActiveQuestion(0);
   };
 
   const openEditLesson = (lesson) => {
@@ -163,6 +196,22 @@ const CourseForm = () => {
       attachments: lesson.attachments || [],
     });
     setShowLessonModal(true);
+  };
+
+  const openEditQuiz = (quiz) => {
+    setEditingQuiz(quiz);
+    setQuizForm({
+      title: quiz.title || '',
+      questions: quiz.questions?.length ? quiz.questions : [{ question: '', options: ['', '', '', ''], correctAnswer: 0 }],
+      rewards: {
+        firstAttempt: quiz.rewards?.firstAttempt ?? 100,
+        secondAttempt: quiz.rewards?.secondAttempt ?? 75,
+        thirdAttempt: quiz.rewards?.thirdAttempt ?? 50,
+        fourthAndMore: quiz.rewards?.fourthAndMore ?? 25,
+      },
+    });
+    setActiveQuestion(0);
+    setShowQuizBuilder(true);
   };
 
   const getTypeIcon = (type) => {
@@ -199,7 +248,7 @@ const CourseForm = () => {
           <div className="relative group">
             <div className="w-full lg:w-48 h-32 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-100 to-purple-100">
               {course.image ? (
-                <img src={course.image} alt="" className="w-full h-full object-cover" />
+                <img src={resolveMediaUrl(course.image)} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <HiOutlinePhotograph className="w-10 h-10 text-indigo-300" />
@@ -271,11 +320,7 @@ const CourseForm = () => {
               <HiOutlineEye className="w-4 h-4 mr-1.5 inline" /> Preview
             </button>
 
-            <button onClick={() => setShowAttendeeModal(true)} className="btn-secondary text-sm py-2">
-              <HiOutlineUserAdd className="w-4 h-4 mr-1.5 inline" /> Add Attendees
-            </button>
-
-            <button onClick={() => setShowContactModal(true)} className="btn-secondary text-sm py-2">
+            <button onClick={() => handleUnsupportedFeature('Contact attendees')} className="btn-secondary text-sm py-2">
               <HiOutlineMail className="w-4 h-4 mr-1.5 inline" /> Contact
             </button>
           </div>
@@ -360,7 +405,7 @@ const CourseForm = () => {
                             <HiOutlinePencil className="w-4 h-4" /> Edit
                           </button>
                           <button
-                            onClick={() => { setDeleteTarget(lesson); setMenuOpen(null); }}
+                            onClick={() => { setDeleteType('lesson'); setDeleteTarget(lesson); setMenuOpen(null); }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                           >
                             <HiOutlineTrash className="w-4 h-4" /> Delete
@@ -477,7 +522,7 @@ const CourseForm = () => {
         <div className="card-elevated animate-fade-in">
           <div className="p-6 border-b border-gray-100 flex items-center justify-between">
             <h3 className="font-bold text-gray-800">Quizzes</h3>
-            <button onClick={() => setShowQuizBuilder(true)} className="btn-primary text-sm flex items-center gap-1.5">
+            <button onClick={() => { resetQuizForm(); setShowQuizBuilder(true); }} className="btn-primary text-sm flex items-center gap-1.5">
               <HiOutlinePlus className="w-4 h-4" /> Add Quiz
             </button>
           </div>
@@ -502,10 +547,10 @@ const CourseForm = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
+                    <button onClick={() => openEditQuiz(quiz)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
                       <HiOutlinePencil className="w-4 h-4" />
                     </button>
-                    <button className="p-2 hover:bg-red-50 rounded-lg text-red-500">
+                    <button onClick={() => { setDeleteType('quiz'); setDeleteTarget(quiz); }} className="p-2 hover:bg-red-50 rounded-lg text-red-500">
                       <HiOutlineTrash className="w-4 h-4" />
                     </button>
                   </div>
@@ -691,7 +736,12 @@ const CourseForm = () => {
       </Modal>
 
       {/* Quiz Builder Modal */}
-      <Modal isOpen={showQuizBuilder} onClose={() => setShowQuizBuilder(false)} title="Quiz Builder" size="xl">
+      <Modal
+        isOpen={showQuizBuilder}
+        onClose={() => { setShowQuizBuilder(false); resetQuizForm(); }}
+        title={editingQuiz ? 'Edit Quiz' : 'Quiz Builder'}
+        size="xl"
+      >
         <div className="flex gap-6 min-h-[500px]">
           {/* Left Panel - Question List */}
           <div className="w-56 border-r border-gray-100 pr-4 space-y-2 flex-shrink-0">
@@ -825,49 +875,8 @@ const CourseForm = () => {
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-          <button onClick={() => setShowQuizBuilder(false)} className="btn-secondary">Cancel</button>
-          <button onClick={handleSaveQuiz} className="btn-primary">Save Quiz</button>
-        </div>
-      </Modal>
-
-      {/* Attendee Modal */}
-      <Modal isOpen={showAttendeeModal} onClose={() => setShowAttendeeModal(false)} title="Add Attendee" size="sm">
-        <div className="space-y-4">
-          <div>
-            <label className="input-label">Email Address</label>
-            <input
-              type="email"
-              value={attendeeEmail}
-              onChange={(e) => setAttendeeEmail(e.target.value)}
-              className="input-field"
-              placeholder="learner@example.com"
-            />
-          </div>
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setShowAttendeeModal(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleAddAttendee} className="btn-primary">Send Invitation</button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Contact Modal */}
-      <Modal isOpen={showContactModal} onClose={() => setShowContactModal(false)} title="Contact Attendees" size="md">
-        <div className="space-y-4">
-          <div>
-            <label className="input-label">Message</label>
-            <textarea
-              value={contactMessage}
-              onChange={(e) => setContactMessage(e.target.value)}
-              className="input-field min-h-[150px]"
-              placeholder="Write your message to attendees..."
-            />
-          </div>
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setShowContactModal(false)} className="btn-secondary">Cancel</button>
-            <button onClick={() => { toast.success('Message sent!'); setShowContactModal(false); }} className="btn-primary">
-              Send Message
-            </button>
-          </div>
+          <button onClick={() => { setShowQuizBuilder(false); resetQuizForm(); }} className="btn-secondary">Cancel</button>
+          <button onClick={handleSaveQuiz} className="btn-primary">{editingQuiz ? 'Update Quiz' : 'Save Quiz'}</button>
         </div>
       </Modal>
 
@@ -875,8 +884,15 @@ const CourseForm = () => {
       <ConfirmDialog
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={() => handleDeleteLesson(deleteTarget._id)}
-        title="Delete Lesson"
+        onConfirm={() => {
+          if (deleteType === 'quiz') {
+            handleDeleteQuiz(deleteTarget._id);
+          } else {
+            handleDeleteLesson(deleteTarget._id);
+          }
+          setDeleteTarget(null);
+        }}
+        title={deleteType === 'quiz' ? 'Delete Quiz' : 'Delete Lesson'}
         message={`Are you sure you want to delete "${deleteTarget?.title}"? This action cannot be undone.`}
       />
     </div>

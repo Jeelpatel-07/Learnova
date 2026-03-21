@@ -10,6 +10,7 @@ import {
   HiOutlineEyeOff,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import { getPostAuthRoute } from '../../utils/helpers';
 
 const Signup = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Learner' });
@@ -27,11 +28,7 @@ const Signup = () => {
     try {
       const user = await signup(form);
       toast.success(`Welcome to Learnova, ${user.name}! 🚀`);
-      if (user.role === 'Admin' || user.role === 'Instructor') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/my-courses');
-      }
+      navigate(getPostAuthRoute(user.role));
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Signup failed');
     }

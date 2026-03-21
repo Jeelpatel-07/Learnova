@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import API from '../api/axios';
 
+const getErrorMessage = (err, fallback) => err.response?.data?.message || err.message || fallback;
+
 const useCourseStore = create((set, get) => ({
   courses: [],
   currentCourse: null,
@@ -10,24 +12,25 @@ const useCourseStore = create((set, get) => ({
 
   // Admin: Fetch all courses
   fetchCourses: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const res = await API.get('/courses');
       set({ courses: res.data.data, loading: false });
     } catch (err) {
-      set({ error: err.response?.data?.message, loading: false });
+      set({ error: getErrorMessage(err, 'Failed to fetch courses'), loading: false });
     }
   },
 
   // Get single course
   fetchCourse: async (id) => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const res = await API.get(`/courses/${id}`);
       set({ currentCourse: res.data.data, loading: false });
       return res.data.data;
     } catch (err) {
-      set({ error: err.response?.data?.message, loading: false });
+      set({ currentCourse: null, error: getErrorMessage(err, 'Failed to fetch course'), loading: false });
+      return null;
     }
   },
 
@@ -83,23 +86,49 @@ const useCourseStore = create((set, get) => ({
 
   // Learner: Fetch published courses
   fetchPublishedCourses: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const res = await API.get('/courses/published');
       set({ courses: res.data.data, loading: false });
     } catch (err) {
-      set({ error: err.response?.data?.message, loading: false });
+      set({ error: getErrorMessage(err, 'Failed to fetch courses'), loading: false });
     }
   },
 
   // Learner: Fetch my enrolled courses
   fetchMyCourses: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const res = await API.get('/courses/my-courses');
-      set({ myCourses: res.data.data, loading: false });
+      const coursesWithProgress = await Promise.all(
+        (res.data.data || []).map(async (course) => {
+          try {
+            const progressRes = await API.get(`/progress/${course._id}`);
+            const progress = progressRes.data.data;
+
+            return {
+              ...course,
+              progress: {
+                ...progress,
+                completedLessons: progress.completedContentIds?.length || 0,
+              },
+            };
+          } catch {
+            return {
+              ...course,
+              progress: {
+                completedLessons: 0,
+                progressPercent: 0,
+                status: 'YetToStart',
+              },
+            };
+          }
+        })
+      );
+
+      set({ myCourses: coursesWithProgress, loading: false });
     } catch (err) {
-      set({ error: err.response?.data?.message, loading: false });
+      set({ error: getErrorMessage(err, 'Failed to fetch your courses'), loading: false });
     }
   },
 
@@ -124,6 +153,44 @@ const useCourseStore = create((set, get) => ({
         set({ currentCourse: courseRes.data.data });
       }
       return res.data.data;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  addQuiz: async (courseId, quizData) => {
+    try {
+      const res = await API.post(`/courses/${courseId}/quizzes`, quizData);
+      const courseRes = await API.get(`/courses/${courseId}`);
+      if (get().currentCourse?._id === courseId) {
+        set({ currentCourse: courseRes.data.data });
+      }
+      return res.data.data;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  updateQuiz: async (courseId, quizId, quizData) => {
+    try {
+      const res = await API.put(`/courses/${courseId}/quizzes/${quizId}`, quizData);
+      const courseRes = await API.get(`/courses/${courseId}`);
+      if (get().currentCourse?._id === courseId) {
+        set({ currentCourse: courseRes.data.data });
+      }
+      return res.data.data;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  deleteQuiz: async (courseId, quizId) => {
+    try {
+      await API.delete(`/courses/${courseId}/quizzes/${quizId}`);
+      const courseRes = await API.get(`/courses/${courseId}`);
+      if (get().currentCourse?._id === courseId) {
+        set({ currentCourse: courseRes.data.data });
+      }
     } catch (err) {
       throw err;
     }

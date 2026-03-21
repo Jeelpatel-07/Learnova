@@ -9,6 +9,7 @@ import {
   HiOutlineEyeOff,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import { getPostAuthRoute } from '../../utils/helpers';
 
 const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -26,13 +27,9 @@ const Login = () => {
     try {
       const user = await login(form.email, form.password);
       toast.success(`Welcome back, ${user.name}! 👋`);
-      if (user.role === 'Admin' || user.role === 'Instructor') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/my-courses');
-      }
+      navigate(getPostAuthRoute(user.role));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Login failed');
+      toast.error(err.response?.data?.message || err.message || 'Login failed');
     }
   };
 

@@ -6,7 +6,7 @@ import SearchBar from '../../components/common/SearchBar';
 import Badge from '../../components/common/Badge';
 import ProgressBar from '../../components/common/ProgressBar';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { getBadgeForPoints, getNextBadge, truncateText } from '../../utils/helpers';
+import { getBadgeForPoints, getNextBadge, resolveMediaUrl, truncateText } from '../../utils/helpers';
 import { BADGE_LEVELS } from '../../utils/constants';
 import {
   HiOutlineAcademicCap,
@@ -36,9 +36,9 @@ const MyCourses = () => {
     : 100;
 
   const getButtonState = (course) => {
-    if (course.progress?.progressPercent === 100) return { label: 'Completed ✓', variant: 'btn-success', disabled: true };
-    if (course.progress?.progressPercent > 0) return { label: 'Continue', variant: 'btn-primary' };
-    return { label: 'Start', variant: 'btn-primary' };
+    if (course.progress?.progressPercent === 100) return { label: 'Completed', variant: 'btn-success', disabled: true, path: `/courses/${course._id}` };
+    if (course.progress?.progressPercent > 0) return { label: 'Continue', variant: 'btn-primary', path: `/learn/${course._id}` };
+    return { label: 'Start', variant: 'btn-primary', path: `/courses/${course._id}` };
   };
 
   if (loading) return <LoadingSpinner size="lg" text="Loading your courses..." />;
@@ -79,7 +79,7 @@ const MyCourses = () => {
                       {/* Image */}
                       <div className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-indigo-100 to-purple-100 flex-shrink-0">
                         {course.image ? (
-                          <img src={course.image} alt="" className="w-full h-full object-cover" />
+                          <img src={resolveMediaUrl(course.image)} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <HiOutlineAcademicCap className="w-10 h-10 text-indigo-200" />
@@ -109,7 +109,7 @@ const MyCourses = () => {
                             {course.progress?.completedLessons || 0}/{course.lessons?.length || 0} lessons completed
                           </span>
                           <button
-                            onClick={() => navigate(`/courses/${course._id}`)}
+                            onClick={() => navigate(btn.path)}
                             className={`${btn.variant} text-sm py-2`}
                             disabled={btn.disabled}
                           >

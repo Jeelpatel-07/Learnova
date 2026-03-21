@@ -67,7 +67,7 @@ BACKEND API REQUIRED:
 ============================================
 
 POST /api/auth/signup
-Body: { name, email, password, role: "learner" }
+Body: { name, email, password, role: "Learner" }
 Response: { success: true, data: { token: "jwt", user: { _id, name, email, role, points } } }
 
 POST /api/auth/login

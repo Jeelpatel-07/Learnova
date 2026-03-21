@@ -1,5 +1,42 @@
 import { BADGE_LEVELS } from './constants';
 
+export const getApiOrigin = () => {
+  const configuredUrl = import.meta.env.VITE_API_URL;
+
+  if (configuredUrl) {
+    try {
+      return new URL(configuredUrl).origin;
+    } catch {
+      return `${window.location.protocol}//${window.location.hostname}:5000`;
+    }
+  }
+
+  return `${window.location.protocol}//${window.location.hostname}:5000`;
+};
+
+export const resolveMediaUrl = (path) => {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${getApiOrigin()}${normalizedPath}`;
+};
+
+export const getPostAuthRoute = (role) => {
+  if (role === 'Admin' || role === 'Instructor') {
+    return '/admin/dashboard';
+  }
+
+  return '/my-courses';
+};
+
+export const calculateQuizPercentage = (correctAnswers, totalQuestions) => {
+  if (!totalQuestions) return 0;
+  return Math.round((correctAnswers / totalQuestions) * 100);
+};
+
+export const hasCompletedLesson = (completedContentIds = [], lessonId) =>
+  completedContentIds.some((id) => String(id) === String(lessonId));
+
 export const getBadgeForPoints = (points) => {
   let badge = BADGE_LEVELS[0];
   for (let i = BADGE_LEVELS.length - 1; i >= 0; i--) {
