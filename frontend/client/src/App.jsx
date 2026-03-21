@@ -60,7 +60,14 @@ function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="courses" element={<AdminDashboard />} />
           <Route path="courses/:id" element={<CourseForm />} />
-          <Route path="reporting" element={<Reporting />} />
+          <Route
+            path="reporting"
+            element={
+              <ProtectedRoute roles={['Admin']}>
+                <Reporting />
+              </ProtectedRoute>
+            }
+          />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
 
@@ -68,7 +75,14 @@ function App() {
         <Route path="/" element={<LearnerLayout />}>
           <Route index element={<Home />} />
           <Route path="courses" element={<Home />} />
-          <Route path="courses/:id" element={<CourseDetail />} />
+          <Route
+            path="courses/:id"
+            element={
+              <ProtectedRoute>
+                <CourseDetail />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="my-courses"
             element={

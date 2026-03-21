@@ -7,7 +7,14 @@ import Modal from '../../components/common/Modal';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { calculateProgress, getBadgeForPoints, getNextBadge, getPointsForAttempt } from '../../utils/helpers';
+import {
+  calculateProgress,
+  calculateQuizPercentage,
+  getBadgeForPoints,
+  getNextBadge,
+  hasCompletedLesson,
+  resolveMediaUrl,
+} from '../../utils/helpers';
 import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
@@ -81,22 +88,28 @@ const LearningPage = () => {
   const completedCount = completedIds.length + (progress?.quizCompleted ? 1 : 0);
   const progressPercent = calculateProgress(completedCount, totalItems);
 
-  const isCompleted = (lessonId) => completedIds.includes(lessonId);
+  const isCompleted = (lessonId) => hasCompletedLesson(completedIds, lessonId);
 
   const markLessonComplete = async (lessonId) => {
     if (isCompleted(lessonId)) return;
     try {
-      await API.post(`/progress/${id}/complete-lesson`, { lessonId });
-      setCompletedIds([...completedIds, lessonId]);
+      const res = await API.post(`/progress/${id}/complete-lesson`, { lessonId });
+      const nextCompletedIds = res.data.data.completedContentIds || [...completedIds, lessonId];
+      setCompletedIds(nextCompletedIds);
+      setProgress((prev) => ({
+        ...prev,
+        ...res.data.data,
+        completedContentIds: nextCompletedIds,
+      }));
       toast.success('Lesson completed! ✅');
 
       // Check if all done
-      const newCompleted = [...completedIds, lessonId];
+      const newCompleted = nextCompletedIds;
       if (newCompleted.length === lessons.length && (progress?.quizCompleted || !currentQuiz)) {
         setShowCompletion(true);
       }
     } catch (err) {
-      toast.error('Failed to mark complete');
+      toast.error(err.response?.data?.message || err.message || 'Failed to mark complete');
     }
   };
 
@@ -127,19 +140,19 @@ const LearningPage = () => {
       setSelectedOption(null);
     } else {
       // Quiz complete
-      const score = newAnswers.reduce((sum, ans, i) => {
+      const correctAnswers = newAnswers.reduce((sum, ans, i) => {
         return sum + (ans === currentQuiz.questions[i].correctAnswer ? 1 : 0);
       }, 0);
-      setQuizScore(score);
-      handleQuizComplete(score, newAnswers);
+      setQuizScore(correctAnswers);
+      handleQuizComplete(correctAnswers, newAnswers);
     }
   };
 
-  const handleQuizComplete = async (score, answers) => {
+  const handleQuizComplete = async (correctAnswers, answers) => {
     setQuizCompleted(true);
     try {
+      const score = calculateQuizPercentage(correctAnswers, currentQuiz.questions.length);
       const res = await API.post(`/progress/${id}/complete-quiz`, {
-        quizId: currentQuiz._id,
         answers,
         score,
       });
@@ -151,25 +164,35 @@ const LearningPage = () => {
       updateUser({ points: (user?.points || 0) + points });
 
       // Update progress
-      setProgress({ ...progress, quizCompleted: true });
+      setProgress((prev) => ({
+        ...prev,
+        ...res.data.data,
+        completedContentIds: prev?.completedContentIds || completedIds,
+      }));
 
       // Check course completion
       if (completedIds.length === lessons.length) {
         setTimeout(() => setShowCompletion(true), 2000);
       }
     } catch (err) {
-      toast.error('Failed to submit quiz');
+      setQuizCompleted(false);
+      toast.error(err.response?.data?.message || err.message || 'Failed to submit quiz');
     }
   };
 
   const handleCompleteCourse = async () => {
     try {
-      await API.post(`/progress/${id}/complete-course`);
+      const res = await API.post(`/progress/${id}/complete-course`);
+      setProgress((prev) => ({
+        ...prev,
+        ...res.data.data,
+        completedContentIds: prev?.completedContentIds || completedIds,
+      }));
       toast.success('🎉 Course Completed! Congratulations!');
       setShowCompletion(false);
       navigate(`/courses/${id}`);
     } catch (err) {
-      toast.error('Failed to complete course');
+      toast.error(err.response?.data?.message || err.message || 'Failed to complete course');
     }
   };
 
@@ -239,7 +262,7 @@ const LearningPage = () => {
                   {lesson.attachments?.length > 0 && currentLessonIndex === i && (
                     <div className="px-12 pb-2 space-y-1">
                       {lesson.attachments.map((att, j) => (
-                        <a key={j} href={att} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-600">
+                        <a key={j} href={resolveMediaUrl(att)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-600">
                           <HiOutlineLink className="w-3 h-3" />
                           <span className="truncate">Attachment {j + 1}</span>
                         </a>
@@ -295,7 +318,7 @@ const LearningPage = () => {
                       title={currentLesson.title}
                     />
                   ) : (
-                    <video src={currentLesson.fileUrl} controls className="w-full h-full" />
+                    <video src={resolveMediaUrl(currentLesson.fileUrl)} controls className="w-full h-full" />
                   )}
                 </div>
               )}
@@ -307,11 +330,11 @@ const LearningPage = () => {
                   <p className="text-gray-600 mb-4">Document: {currentLesson.title}</p>
                   {currentLesson.fileUrl && (
                     <div className="flex items-center justify-center gap-3">
-                      <a href={currentLesson.fileUrl} target="_blank" rel="noreferrer" className="btn-primary text-sm">
+                      <a href={resolveMediaUrl(currentLesson.fileUrl)} target="_blank" rel="noreferrer" className="btn-primary text-sm">
                         View Document
                       </a>
                       {currentLesson.allowDownload && (
-                        <a href={currentLesson.fileUrl} download className="btn-secondary text-sm flex items-center gap-1.5">
+                        <a href={resolveMediaUrl(currentLesson.fileUrl)} download className="btn-secondary text-sm flex items-center gap-1.5">
                           <HiOutlineDownload className="w-4 h-4" /> Download
                         </a>
                       )}
@@ -323,10 +346,10 @@ const LearningPage = () => {
               {/* Image */}
               {currentLesson.type === 'Image' && (
                 <div className="rounded-2xl overflow-hidden mb-6">
-                  <img src={currentLesson.fileUrl} alt={currentLesson.title} className="w-full max-h-[600px] object-contain bg-gray-100" />
+                  <img src={resolveMediaUrl(currentLesson.fileUrl)} alt={currentLesson.title} className="w-full max-h-[600px] object-contain bg-gray-100" />
                   {currentLesson.allowDownload && (
                     <div className="mt-3 text-center">
-                      <a href={currentLesson.fileUrl} download className="btn-secondary text-sm inline-flex items-center gap-1.5">
+                      <a href={resolveMediaUrl(currentLesson.fileUrl)} download className="btn-secondary text-sm inline-flex items-center gap-1.5">
                         <HiOutlineDownload className="w-4 h-4" /> Download Image
                       </a>
                     </div>
@@ -340,7 +363,7 @@ const LearningPage = () => {
                   <p className="text-sm font-semibold text-gray-700 mb-2">📎 Additional Resources</p>
                   <div className="space-y-2">
                     {currentLesson.attachments.map((att, i) => (
-                      <a key={i} href={att} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700">
+                      <a key={i} href={resolveMediaUrl(att)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700">
                         <HiOutlineLink className="w-4 h-4" />
                         {att}
                       </a>

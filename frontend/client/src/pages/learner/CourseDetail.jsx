@@ -10,7 +10,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import SearchBar from '../../components/common/SearchBar';
 import API from '../../api/axios';
 import toast from 'react-hot-toast';
-import { getInitials } from '../../utils/helpers';
+import { getInitials, hasCompletedLesson, resolveMediaUrl } from '../../utils/helpers';
 import {
   HiOutlineCheckCircle,
   HiOutlinePlay,
@@ -47,6 +47,7 @@ const CourseDetail = () => {
       const res = await API.get(`/progress/${id}`);
       setProgress(res.data.data);
     } catch (err) {
+      setProgress(null);
       // Not enrolled yet
     }
   };
@@ -86,7 +87,7 @@ const CourseDetail = () => {
       setReviewForm({ rating: 5, comment: '' });
       fetchReviews();
     } catch (err) {
-      toast.error('Failed to submit review');
+      toast.error(err.response?.data?.message || err.message || 'Failed to submit review');
     }
   };
 
@@ -100,7 +101,7 @@ const CourseDetail = () => {
   };
 
   const isLessonCompleted = (lessonId) => {
-    return progress?.completedContentIds?.includes(lessonId);
+    return hasCompletedLesson(progress?.completedContentIds, lessonId);
   };
 
   const avgRating = reviews.length > 0
@@ -126,7 +127,7 @@ const CourseDetail = () => {
         <div className="flex flex-col lg:flex-row">
           <div className="lg:w-80 h-48 lg:h-auto bg-gradient-to-br from-indigo-100 to-purple-100 flex-shrink-0">
             {course.image ? (
-              <img src={course.image} alt="" className="w-full h-full object-cover" />
+              <img src={resolveMediaUrl(course.image)} alt="" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <HiOutlineBookOpen className="w-16 h-16 text-indigo-200" />

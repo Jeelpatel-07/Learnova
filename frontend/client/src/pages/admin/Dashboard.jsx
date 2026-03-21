@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import useCourseStore from '../../store/courseStore';
 import SearchBar from '../../components/common/SearchBar';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { formatDuration, truncateText } from '../../utils/helpers';
+import { formatDuration, resolveMediaUrl } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import {
   HiOutlinePlus,
@@ -24,6 +24,7 @@ import {
 
 const Dashboard = () => {
   const { courses, fetchCourses, createCourse, deleteCourse, loading } = useCourseStore();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'list'
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -44,12 +45,13 @@ const Dashboard = () => {
   const handleCreate = async () => {
     if (!newCourseName.trim()) return;
     try {
-      await createCourse({ title: newCourseName });
+      const course = await createCourse({ title: newCourseName });
       setNewCourseName('');
       setShowCreateModal(false);
       toast.success('Course created! 🎉');
+      navigate(`/admin/courses/${course._id}`);
     } catch (err) {
-      toast.error('Failed to create course');
+      toast.error(err.response?.data?.message || err.message || 'Failed to create course');
     }
   };
 
@@ -71,7 +73,7 @@ const Dashboard = () => {
       {/* Image */}
       <div className="relative mb-3 rounded-xl overflow-hidden bg-gradient-to-br from-indigo-100 to-purple-100 h-36">
         {course.image ? (
-          <img src={course.image} alt={course.title} className="w-full h-full object-cover" />
+          <img src={resolveMediaUrl(course.image)} alt={course.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <HiOutlineAcademicCap className="w-12 h-12 text-indigo-300" />
@@ -234,7 +236,7 @@ const Dashboard = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center flex-shrink-0">
                         {course.image ? (
-                          <img src={course.image} alt="" className="w-full h-full object-cover rounded-lg" />
+                          <img src={resolveMediaUrl(course.image)} alt="" className="w-full h-full object-cover rounded-lg" />
                         ) : (
                           <HiOutlineAcademicCap className="w-5 h-5 text-indigo-400" />
                         )}

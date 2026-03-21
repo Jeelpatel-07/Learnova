@@ -5,7 +5,7 @@ import useAuthStore from '../../store/authStore';
 import SearchBar from '../../components/common/SearchBar';
 import Badge from '../../components/common/Badge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { truncateText } from '../../utils/helpers';
+import { resolveMediaUrl, truncateText } from '../../utils/helpers';
 import {
   HiOutlineAcademicCap,
   HiOutlineBookOpen,
@@ -94,7 +94,7 @@ const Home = () => {
               {/* Image */}
               <div className="relative h-44 bg-gradient-to-br from-indigo-100 to-purple-100 overflow-hidden">
                 {course.image ? (
-                  <img src={course.image} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={resolveMediaUrl(course.image)} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <HiOutlineAcademicCap className="w-16 h-16 text-indigo-200" />
@@ -129,11 +129,12 @@ const Home = () => {
                   </span>
                   <span className="flex items-center gap-1">
                     <HiOutlineClock className="w-3.5 h-3.5" />
-                    {course.lessons?.length || 0} lessons                  </span>
-                  {course.rating && (
+                    {course.quizzes?.length || 0} quizzes
+                  </span>
+                  {course.averageRating && (
                     <span className="flex items-center gap-1">
                       <HiOutlineStar className="w-3.5 h-3.5 text-amber-400" />
-                      {course.rating}
+                      {course.averageRating}
                     </span>
                   )}
                 </div>
