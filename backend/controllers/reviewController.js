@@ -67,7 +67,8 @@ const addReview = async (req, res) => {
     const courseId = req.params.id;
     const { rating, comment } = req.body;
     const userId = req.user._id;
-    const userName = req.user.name;
+
+    const existingReview = await Review.findOne({ userId, courseId }).lean();
 
     // Validate rating
     if (!rating || rating < 1 || rating > 5) {
@@ -100,11 +101,11 @@ const addReview = async (req, res) => {
         runValidators: true,
         setDefaultsOnInsert: true,
       }
-    );
+    ).populate("userId", "name email");
 
     res.status(201).json({
       success: true,
-      message: "Review saved successfully",
+      message: existingReview ? "Review updated successfully" : "Review added successfully",
       data: review,
     });
   } catch (error) {

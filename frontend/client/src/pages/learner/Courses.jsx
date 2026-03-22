@@ -10,7 +10,6 @@ import { resolveMediaUrl, truncateText } from '../../utils/helpers';
 import {
   HiOutlineAcademicCap,
   HiOutlineBookOpen,
-  HiOutlineClock,
   HiOutlineArrowRight,
   HiOutlineStar,
   HiOutlinePlay,
@@ -21,6 +20,8 @@ import {
   HiOutlineFilter,
   HiOutlinePuzzle,
   HiOutlineUsers,
+  HiOutlineLockClosed,
+  HiOutlineMail,
 } from 'react-icons/hi';
 
 const Courses = () => {
@@ -93,7 +94,14 @@ const Courses = () => {
 
   const getButtonContent = (course) => {
     if (!isAuthenticated) {
+      if (course.visibility === 'SignedIn') {
+        return { label: 'Sign In to View', icon: <HiOutlineLockClosed className="w-4 h-4" />, variant: 'btn-secondary' };
+      }
       return { label: 'View Course', icon: <HiOutlineArrowRight className="w-4 h-4" />, variant: 'btn-primary' };
+    }
+    const isInvited = (course.invitedUsers || []).some((u) => String(u?._id || u) === String(currentUser?._id || ''));
+    if (course.accessRule === 'Invitation' && !progressMap[course._id] && !isInvited) {
+      return { label: 'Invitation Only', icon: <HiOutlineMail className="w-4 h-4" />, variant: 'btn-secondary' };
     }
     if (course.accessRule === 'Paid' && !progressMap[course._id]) {
       return { label: `$${course.price}`, icon: <HiOutlineShoppingCart className="w-4 h-4" />, variant: 'btn-primary' };
@@ -110,6 +118,8 @@ const Courses = () => {
     }
     return { label: 'Start', icon: <HiOutlinePlay className="w-4 h-4" />, variant: 'btn-primary' };
   };
+
+  const currentUser = isAuthenticated ? JSON.parse(localStorage.getItem('learnova_user') || 'null') : null;
 
   if (loading) return <LoadingSpinner size="lg" text="Loading courses..." />;
 
@@ -225,6 +235,10 @@ const Courses = () => {
                       {course.tags?.slice(0, 3).map((tag, j) => (
                         <Badge key={j} variant="primary" size="xs">{tag}</Badge>
                       ))}
+                      <Badge variant="gray" size="xs">{course.visibility === 'SignedIn' ? 'Signed In' : 'Everyone'}</Badge>
+                      <Badge variant={course.accessRule === 'Invitation' ? 'warning' : 'info'} size="xs">
+                        {course.accessRule === 'Invitation' ? 'Invitation' : course.accessRule}
+                      </Badge>
                     </div>
                     <h3 className="font-bold text-gray-800 mb-1.5 group-hover:text-indigo-600 transition-colors line-clamp-1">
                       {course.title}
@@ -295,6 +309,10 @@ const Courses = () => {
                           {course.tags?.slice(0, 4).map((tag, j) => (
                             <Badge key={j} variant="primary" size="xs">{tag}</Badge>
                           ))}
+                          <Badge variant="gray" size="xs">{course.visibility === 'SignedIn' ? 'Signed In' : 'Everyone'}</Badge>
+                          <Badge variant={course.accessRule === 'Invitation' ? 'warning' : 'info'} size="xs">
+                            {course.accessRule === 'Invitation' ? 'Invitation' : course.accessRule}
+                          </Badge>
                         </div>
                         <h3 className="font-bold text-gray-800 mb-1 group-hover:text-indigo-600 transition-colors">
                           {course.title}
