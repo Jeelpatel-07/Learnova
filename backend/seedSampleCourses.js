@@ -31,15 +31,27 @@ const createQuiz = (title, questions) => ({
   })),
 });
 
-const buildCourse = ({ title, description, tags, image, lessons, quizzes }) => ({
+const buildCourse = ({
+  title,
+  description,
+  tags,
+  image,
+  lessons,
+  quizzes,
+  published = true,
+  visibility = "Everyone",
+  accessRule = "Open",
+  price = 0,
+}) => ({
   title,
   description,
   tags,
   image,
   responsible: "Demo Instructor",
-  published: true,
-  visibility: "Everyone",
-  accessRule: "Open",
+  published,
+  visibility,
+  accessRule,
+  price,
   lessons,
   quizzes,
 });
@@ -534,6 +546,139 @@ sampleCourses.push(
   })
 );
 
+sampleCourses.push(
+  buildCourse({
+    title: "Full Stack MERN Bootcamp Pro",
+    description:
+      "A structured premium course that walks through modern MERN architecture, authentication, dashboards, deployment, and production thinking.",
+    tags: ["MERN", "Full Stack", "Premium"],
+    image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80",
+    accessRule: "Paid",
+    price: 2499,
+    lessons: [
+      createLesson("Planning the Product Architecture", 18, "Map frontend, backend, database, auth, and deployment responsibilities before writing code."),
+      createLesson("Building Secure Authentication", 22, "Implement login, signup, route protection, and role-based access with production-ready boundaries."),
+      createLesson("Dashboard Patterns and State Management", 19, "Create responsive dashboard experiences with reliable state handling and API integration."),
+      createLesson("Deploying the Full Stack App", 16, "Package the app for deployment with environment variables, build strategy, and common production checks."),
+    ],
+    quizzes: [
+      createQuiz("MERN Foundations Quiz", [
+        { question: "Why separate frontend and backend concerns clearly in a MERN app?", options: ["To keep the codebase easier to scale and maintain", "To make deployment impossible", "To avoid APIs completely", "To remove authentication"], correctAnswer: 0 },
+        { question: "What is a key reason to protect routes on both frontend and backend?", options: ["Because frontend checks alone are not enough for security", "Because CSS needs it", "Because MongoDB stores routes", "Because browsers refuse public pages"], correctAnswer: 0 },
+        { question: "A production deployment checklist should usually include:", options: ["Environment variables, build verification, and error handling", "Only color palette decisions", "Only local screenshots", "Removing all logs forever"], correctAnswer: 0 },
+      ]),
+      createQuiz("Deployment and Security Quiz", [
+        { question: "What is the safest place to store secrets like JWT keys?", options: ["Environment variables on the server", "Inside public frontend code", "In the browser localStorage as plaintext config", "In a screenshot"], correctAnswer: 0 },
+        { question: "Why validate API requests on the server?", options: ["To prevent invalid or unsafe input from reaching business logic", "To make responses larger", "To remove the need for models", "To disable authentication"], correctAnswer: 0 },
+      ]),
+    ],
+  }),
+  buildCourse({
+    title: "Advanced UI Design Systems Masterclass",
+    description:
+      "A premium design course focused on component systems, visual consistency, accessibility, token strategy, and scalable interface craft.",
+    tags: ["UI Design", "Design Systems", "Premium"],
+    image: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80",
+    accessRule: "Paid",
+    price: 1999,
+    lessons: [
+      createLesson("Design Tokens and Foundations", 15, "Create color, spacing, type, and elevation systems that support consistent interfaces."),
+      createLesson("Reusable Component Architecture", 17, "Define components, variants, states, and usage rules for a robust design system."),
+      createLesson("Accessibility in Visual Systems", 14, "Design accessible contrast, focus, labeling, and interaction patterns from the start."),
+      createLesson("Scaling Governance Across Teams", 12, "Keep the system healthy with contribution rules, documentation, and review habits."),
+    ],
+    quizzes: [
+      createQuiz("Design Systems Quiz", [
+        { question: "What is a design token?", options: ["A reusable design decision like a color or spacing value", "A login cookie", "A database record", "A one-off illustration"], correctAnswer: 0 },
+        { question: "Why define component states clearly?", options: ["To keep interactions predictable across the product", "To remove usability", "To increase random styling", "To avoid documentation"], correctAnswer: 0 },
+        { question: "Accessibility in a design system should be:", options: ["Built in from the beginning", "Added only after launch if possible", "Ignored for internal products", "Handled only by marketing"], correctAnswer: 0 },
+      ]),
+      createQuiz("Governance Quiz", [
+        { question: "Why document contribution rules for a system?", options: ["To help teams extend it consistently", "To slow everyone down permanently", "To stop collaboration", "To replace design reviews"], correctAnswer: 0 },
+        { question: "A scalable design system reduces:", options: ["Inconsistency and duplicated UI effort", "All product decisions", "Need for testing", "The importance of users"], correctAnswer: 0 },
+      ]),
+    ],
+  }),
+  buildCourse({
+    title: "Data Analytics with SQL and BI Dashboards",
+    description:
+      "A paid analytics track covering SQL thinking, dashboard design, stakeholder metrics, and insight communication for business teams.",
+    tags: ["SQL", "Analytics", "Premium"],
+    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+    accessRule: "Paid",
+    price: 1799,
+    lessons: [
+      createLesson("Thinking in Tables and Joins", 18, "Build confidence in relational thinking, joins, and how raw records become analysis."),
+      createLesson("Writing Business-Focused SQL Queries", 20, "Translate business questions into queries that return decision-ready answers."),
+      createLesson("Designing Clear BI Dashboards", 16, "Create dashboards that help teams monitor the right metrics without noise."),
+      createLesson("Presenting Insights with Context", 13, "Turn charts and query output into recommendations leaders can act on."),
+    ],
+    quizzes: [
+      createQuiz("SQL Basics Quiz", [
+        { question: "Why use joins in SQL?", options: ["To combine related data across tables", "To replace indexes with colors", "To remove filters from queries", "To store passwords in charts"], correctAnswer: 0 },
+        { question: "A useful analytics query should start from:", options: ["A clear business question", "Random column selection", "Only formatting rules", "The final chart color"], correctAnswer: 0 },
+        { question: "Good dashboards should prioritize:", options: ["Clarity and decision support", "Maximum visual noise", "Every metric ever tracked", "Only decorative widgets"], correctAnswer: 0 },
+      ]),
+      createQuiz("Insight Communication Quiz", [
+        { question: "A strong insight presentation usually includes:", options: ["Context, evidence, and recommended action", "Only a chart with no explanation", "Only technical jargon", "A list of database tables"], correctAnswer: 0 },
+        { question: "Why avoid vanity metrics?", options: ["They can look impressive without guiding meaningful decisions", "They improve SQL speed", "They reduce storage use", "They secure APIs"], correctAnswer: 0 },
+      ]),
+    ],
+  }),
+  buildCourse({
+    title: "Product Management Interview and Strategy Lab",
+    description:
+      "A premium PM prep program focused on product sense, execution, metrics, prioritization, and communication for interview and real-world strategy work.",
+    tags: ["Product", "Strategy", "Premium"],
+    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
+    accessRule: "Paid",
+    price: 2199,
+    lessons: [
+      createLesson("Framing Product Problems", 16, "Learn to clarify goals, users, pain points, and constraints before proposing solutions."),
+      createLesson("Prioritization and Tradeoff Thinking", 17, "Balance impact, effort, risk, and timing while making difficult roadmap calls."),
+      createLesson("Metrics and Product Judgment", 15, "Choose leading and lagging indicators that reflect user and business outcomes."),
+      createLesson("Communicating Strategy Clearly", 14, "Present product decisions with structure, conviction, and appropriate nuance."),
+    ],
+    quizzes: [
+      createQuiz("Product Sense Quiz", [
+        { question: "What should come before proposing product features?", options: ["Clarifying the user problem and desired outcome", "Picking colors first", "Writing release notes", "Estimating sprint velocity only"], correctAnswer: 0 },
+        { question: "Prioritization is mainly about:", options: ["Making tradeoffs explicit and intentional", "Adding everything to the roadmap", "Avoiding decisions", "Choosing the longest backlog items"], correctAnswer: 0 },
+        { question: "A good product metric should help answer:", options: ["Whether the product is improving the intended outcome", "How many meetings happened", "How many screenshots were shared", "How many browsers were open"], correctAnswer: 0 },
+      ]),
+      createQuiz("Strategy Communication Quiz", [
+        { question: "Why communicate product strategy clearly?", options: ["To align teams on why priorities exist", "To increase confusion", "To remove stakeholder context", "To avoid accountability"], correctAnswer: 0 },
+        { question: "Strong PM answers usually show:", options: ["Structured thinking and justified tradeoffs", "Only opinions with no reasoning", "Only technical implementation details", "Only final decisions"], correctAnswer: 0 },
+      ]),
+    ],
+  }),
+  buildCourse({
+    title: "Cyber Defense and Secure Engineering Pro",
+    description:
+      "A premium security course covering threat thinking, secure coding habits, incident response, and practical controls for modern engineering teams.",
+    tags: ["Security", "Engineering", "Premium"],
+    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80",
+    accessRule: "Paid",
+    price: 2699,
+    lessons: [
+      createLesson("Threat Modeling for Builders", 18, "Identify what can go wrong in systems early so controls are deliberate instead of reactive."),
+      createLesson("Secure Coding and Validation", 19, "Reduce common application risks through safer coding and input validation practices."),
+      createLesson("Authentication, Secrets, and Access Control", 17, "Handle user identity, secrets, and permissions with stronger engineering discipline."),
+      createLesson("Incident Readiness and Response", 15, "Prepare to detect, contain, investigate, and learn from security incidents effectively."),
+    ],
+    quizzes: [
+      createQuiz("Secure Engineering Quiz", [
+        { question: "Threat modeling helps teams:", options: ["Anticipate risks before they become incidents", "Avoid architecture decisions", "Increase random complexity", "Replace all testing"], correctAnswer: 0 },
+        { question: "Why is input validation important?", options: ["It reduces unsafe or malformed data entering the system", "It only improves fonts", "It removes authentication", "It makes logs smaller"], correctAnswer: 0 },
+        { question: "Access control should follow which mindset?", options: ["Least privilege", "Everyone gets admin access", "No role separation", "Shared passwords"], correctAnswer: 0 },
+      ]),
+      createQuiz("Incident Response Quiz", [
+        { question: "Why prepare incident response ahead of time?", options: ["To respond faster and more clearly under pressure", "To guarantee incidents never happen", "To remove monitoring", "To stop using logs"], correctAnswer: 0 },
+        { question: "A post-incident review should aim to:", options: ["Improve systems and process without repeating the same mistakes", "Assign blame only", "Delete all evidence", "Avoid future documentation"], correctAnswer: 0 },
+      ]),
+    ],
+  })
+);
+
 async function ensureInstructor() {
   let instructor = await User.findOne({ email: DEMO_INSTRUCTOR.email });
 
@@ -564,6 +709,7 @@ async function upsertCourse(courseSeed, instructorId) {
     published,
     visibility,
     accessRule,
+    price,
     lessons,
     quizzes,
   } = courseSeed;
@@ -580,6 +726,7 @@ async function upsertCourse(courseSeed, instructorId) {
       published,
       visibility,
       accessRule,
+      price: Number(price) || 0,
       createdBy: instructorId,
     });
     console.log(`Created course: ${title}`);
@@ -591,6 +738,7 @@ async function upsertCourse(courseSeed, instructorId) {
     course.published = published;
     course.visibility = visibility;
     course.accessRule = accessRule;
+    course.price = Number(price) || 0;
     await course.save();
     console.log(`Updated course: ${title}`);
   }

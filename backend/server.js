@@ -7,6 +7,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 const connectDB = require("./config/db");
+const { handleRazorpayWebhook } = require("./controllers/paymentController");
 
 // Load environment variables
 dotenv.config();
@@ -43,6 +44,8 @@ app.use(
   })
 );
 
+app.post("/api/payments/webhook", express.raw({ type: "application/json" }), handleRazorpayWebhook);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -73,6 +76,9 @@ app.use("/api/reviews", require("./routes/reviewRoutes"));
 
 // Reporting routes
 app.use("/api/reporting", require("./routes/reportingRoutes"));
+
+// Payment routes
+app.use("/api/payments", require("./routes/paymentRoutes"));
 
 // ==============================================
 // START SERVER

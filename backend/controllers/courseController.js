@@ -60,6 +60,21 @@ const canAccessCourse = (course, user) => {
   );
 };
 
+const enrollLearnerInCourse = async (course, userId) => {
+  const alreadyEnrolled = course.attendees.some((attendeeId) => attendeeId.toString() === userId.toString());
+  if (!alreadyEnrolled) {
+    course.attendees.push(userId);
+    course.invitedUsers = course.invitedUsers.filter((invitedId) => invitedId.toString() !== userId.toString());
+    await course.save();
+  }
+
+  return Progress.findOneAndUpdate(
+    { userId, courseId: course._id },
+    { $setOnInsert: { userId, courseId: course._id, enrolledDate: new Date() } },
+    { new: true, upsert: true }
+  );
+};
+
 // ---- controllers ----
 
 const createCourse = async (req, res) => {
@@ -275,15 +290,11 @@ const enrollUser = async (req, res) => {
       return res.status(200).json({ success: true, message: "Already enrolled", data: existingProgress });
     }
 
-    course.attendees.push(userId);
-    course.invitedUsers = course.invitedUsers.filter((i) => i.toString() !== userId.toString());
-    await course.save();
+    if (course.accessRule === "Paid" && req.user.role === "Learner") {
+      return res.status(403).json({ success: false, message: "Payment is required before enrolling in this course" });
+    }
 
-    const progress = await Progress.findOneAndUpdate(
-      { userId, courseId },
-      { $setOnInsert: { userId, courseId, enrolledDate: new Date() } },
-      { new: true, upsert: true }
-    );
+    const progress = await enrollLearnerInCourse(course, userId);
 
     res.status(200).json({ success: true, message: "Successfully enrolled", data: progress });
   } catch (error) {
@@ -391,4 +402,5 @@ module.exports = {
   uploadCourseImage,
   addAttendees,
   contactAttendees,
+  enrollLearnerInCourse,
 };
