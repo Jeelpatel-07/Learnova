@@ -23,6 +23,38 @@ const calculateProgressPercent = async (courseId, progress) => {
   return Math.round((completedItems / totalItems) * 100);
 };
 
+const normalizeQuizAnswers = (quiz, answers = []) => {
+  if (!Array.isArray(answers)) return [];
+
+  return answers
+    .map((answer, index) => {
+      const question = quiz.questions[index];
+      if (!question) return null;
+
+      if (answer && typeof answer === "object" && !Array.isArray(answer)) {
+        const selectedOption = Number(answer.selectedOption);
+        return {
+          questionId: answer.questionId || question._id,
+          selectedOption,
+          isCorrect:
+            typeof answer.isCorrect === "boolean"
+              ? answer.isCorrect
+              : selectedOption === question.correctAnswer,
+        };
+      }
+
+      const selectedOption = Number(answer);
+      if (!Number.isInteger(selectedOption) || selectedOption < 0) return null;
+
+      return {
+        questionId: question._id,
+        selectedOption,
+        isCorrect: selectedOption === question.correctAnswer,
+      };
+    })
+    .filter(Boolean);
+};
+
 const getProgress = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -127,6 +159,8 @@ const completeQuiz = async (req, res) => {
     const previousAttempts = await QuizAttempt.countDocuments({ userId, quizId: quiz._id });
     const attemptNumber = previousAttempts + 1;
 
+    const normalizedAnswers = normalizeQuizAnswers(quiz, answers);
+
     // Calculate correctness
     const totalQuestions = quiz.questions.length;
     const correctCount = Math.round((Number(score) / 100) * totalQuestions);
@@ -156,7 +190,7 @@ const completeQuiz = async (req, res) => {
       courseId,
       quizId: quiz._id,
       attemptNumber,
-      answers,
+      answers: normalizedAnswers,
       score: Number(score),
       totalQuestions,
       correctCount,

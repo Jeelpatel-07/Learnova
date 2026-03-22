@@ -49,6 +49,7 @@ const LearningPage = () => {
   const [quizAnswers, setQuizAnswers] = useState([]);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
+  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
 
   // Reward popup
   const [showReward, setShowReward] = useState(false);
@@ -85,9 +86,9 @@ const LearningPage = () => {
   const lessons = course?.lessons || [];
   const currentLesson = lessons[currentLessonIndex];
   const quizzes = course?.quizzes || [];
-  const currentQuiz = quizzes[0];
+  const currentQuiz = quizzes[currentQuizIndex] || null;
 
-  const totalItems = lessons.length + (currentQuiz ? 1 : 0);
+  const totalItems = lessons.length + quizzes.length;
   const completedCount = completedIds.length + (progress?.completedQuizzes?.length || 0);
   const progressPercent = calculateProgress(completedCount, totalItems);
 
@@ -106,7 +107,7 @@ const LearningPage = () => {
       }));
       toast.success('Lesson completed! ✅');
 
-      if (nextCompletedIds.length === lessons.length && ((progress?.completedQuizzes?.length > 0) || !currentQuiz)) {
+      if (nextCompletedIds.length === lessons.length && ((progress?.completedQuizzes?.length >= quizzes.length) || quizzes.length === 0)) {
         setShowCompletion(true);
       }
     } catch (err) {
@@ -120,8 +121,9 @@ const LearningPage = () => {
     }
     if (currentLessonIndex < lessons.length - 1) {
       setCurrentLessonIndex(currentLessonIndex + 1);
-    } else if (currentQuiz) {
+    } else if (quizzes.length > 0) {
       setCurrentLessonIndex(lessons.length);
+      setCurrentQuizIndex(0);
     }
   };
 
@@ -155,6 +157,7 @@ const LearningPage = () => {
     try {
       const score = calculateQuizPercentage(correctAnswers, currentQuiz.questions.length);
       const res = await API.post(`/progress/${id}/complete-quiz`, {
+        quizId: currentQuiz._id,
         answers,
         score,
       });
@@ -170,7 +173,8 @@ const LearningPage = () => {
         completedLessons: prev?.completedLessons || completedIds,
       }));
 
-      if (completedIds.length === lessons.length) {
+      const newCompletedQuizCount = (progress?.completedQuizzes?.length || 0) + 1;
+      if (completedIds.length === lessons.length && newCompletedQuizCount >= quizzes.length) {
         setTimeout(() => setShowCompletion(true), 2000);
       }
     } catch (err) {
@@ -198,6 +202,7 @@ const LearningPage = () => {
   if (!course) return <LoadingSpinner size="lg" text="Loading..." />;
 
   const isShowingQuiz = currentLessonIndex >= lessons.length;
+  const isQuizCompleted = (quizId) => progress?.completedQuizzes?.some((id) => String(id) === String(quizId));
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -268,27 +273,28 @@ const LearningPage = () => {
                 </div>
               ))}
 
-              {/* Quiz item in sidebar */}
-              {currentQuiz && (
+              {/* Quiz items in sidebar */}
+              {quizzes.map((quiz, qi) => (
                 <button
-                  onClick={() => { setCurrentLessonIndex(lessons.length); }}
+                  key={quiz._id || qi}
+                  onClick={() => { setCurrentLessonIndex(lessons.length); setCurrentQuizIndex(qi); setQuizStarted(false); setQuizCompleted(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                    isShowingQuiz ? 'bg-purple-50 border-r-2 border-purple-500' : 'hover:bg-gray-50'
+                    isShowingQuiz && currentQuizIndex === qi ? 'bg-purple-50 border-r-2 border-purple-500' : 'hover:bg-gray-50'
                   }`}
                 >
-                  {progress?.completedQuizzes?.length > 0 ? (
+                  {isQuizCompleted(quiz._id) ? (
                     <HiOutlineCheckCircle className="w-5 h-5 text-indigo-500 flex-shrink-0" />
                   ) : (
                     <div className="w-5 h-5 rounded-full border-2 border-purple-300 flex-shrink-0" />
                   )}
                   <div>
-                    <p className={`text-sm font-medium ${isShowingQuiz ? 'text-purple-600' : 'text-gray-700'}`}>
-                      Quiz
+                    <p className={`text-sm font-medium ${isShowingQuiz && currentQuizIndex === qi ? 'text-purple-600' : 'text-gray-700'}`}>
+                      {quiz.title || `Quiz ${qi + 1}`}
                     </p>
-                    <p className="text-xs text-gray-400">{currentQuiz.questions?.length || 0} questions</p>
+                    <p className="text-xs text-gray-400">{quiz.questions?.length || 0} questions</p>
                   </div>
                 </button>
-              )}
+              ))}
             </div>
           </div>
         )}

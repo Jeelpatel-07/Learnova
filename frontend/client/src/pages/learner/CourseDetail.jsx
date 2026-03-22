@@ -238,6 +238,38 @@ const CourseDetail = () => {
                 </button>
               );
             })}
+
+            {/* Quizzes in content list */}
+            {course.quizzes?.map((quiz, qi) => {
+              const qCompleted = progress?.completedQuizzes?.some((qid) => String(qid) === String(quiz._id));
+              return (
+                <button
+                  key={quiz._id || `quiz-${qi}`}
+                  onClick={() => progress && navigate(`/learn/${id}`)}
+                  className={`w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors text-left ${
+                    !progress ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-400 w-6">{filteredLessons.length + qi + 1}</span>
+                    <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <HiOutlinePuzzle className="w-4 h-4 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-gray-800">{quiz.title || `Quiz ${qi + 1}`}</p>
+                      <p className="text-xs text-gray-500">{quiz.questions?.length || 0} questions</p>
+                    </div>
+                  </div>
+                  <div>
+                    {qCompleted ? (
+                      <HiOutlineCheckCircle className="w-6 h-6 text-indigo-500" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full border-2 border-gray-200" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
