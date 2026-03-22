@@ -15,6 +15,7 @@ import Reporting from './pages/admin/Reporting';
 // Learner
 import LearnerLayout from './components/learner/LearnerLayout';
 import Home from './pages/learner/Home';
+import Courses from './pages/learner/Courses';
 import MyCourses from './pages/learner/MyCourses';
 import CourseDetail from './pages/learner/CourseDetail';
 import LearningPage from './pages/learner/LearningPage';
@@ -76,15 +77,8 @@ function App() {
         {/* Learner Routes */}
         <Route path="/" element={<LearnerLayout />}>
           <Route index element={<Home />} />
-          <Route path="courses" element={<Home />} />
-          <Route
-            path="courses/:id"
-            element={
-              <ProtectedRoute>
-                <CourseDetail />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="courses" element={<Courses />} />
+          <Route path="courses/:id" element={<CourseDetail />} />
           <Route
             path="my-courses"
             element={

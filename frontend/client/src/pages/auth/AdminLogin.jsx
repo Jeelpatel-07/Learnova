@@ -1,0 +1,182 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import useAuthStore from '../../store/authStore';
+import {
+  HiOutlineMail,
+  HiOutlineLockClosed,
+  HiOutlineEye,
+  HiOutlineEyeOff,
+  HiOutlineShieldCheck,
+} from 'react-icons/hi';
+import toast from 'react-hot-toast';
+
+const AdminLogin = () => {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const { login, loading, error, clearError } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    clearError();
+    try {
+      const user = await login(form.email, form.password);
+      if (user.role !== 'Admin' && user.role !== 'Instructor') {
+        useAuthStore.getState().logout();
+        toast.error('Access denied. This login is for Admin & Instructor accounts only.');
+        return;
+      }
+      toast.success(`Welcome back, ${user.name}! 🛡️`);
+      navigate('/admin/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Login failed');
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left Panel — Dark Admin Theme */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 to-indigo-900 relative overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-20 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl animate-float" />
+        </div>
+        <div className="relative z-10 flex flex-col justify-center px-16 text-white">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center">
+              <HiOutlineShieldCheck className="w-7 h-7" />
+            </div>
+            <span className="text-3xl font-bold">Learnova Admin</span>
+          </div>
+          <h1 className="text-4xl font-bold mb-4 leading-tight">
+            Admin<br />Sign In
+          </h1>
+          <p className="text-lg text-white/70 max-w-md">
+            Access the backoffice to manage courses, track learner progress, view reports, and configure your platform.
+          </p>
+
+          <div className="mt-12 space-y-4">
+            {[
+              '🛡️ Full platform access',
+              '📊 Reporting & analytics',
+              '📚 Course management',
+              '👥 Learner tracking',
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 text-white/80">
+                <span className="text-lg">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel — Login Form */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-gray-50">
+        <div className="w-full max-w-md animate-slide-up">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center gap-2.5 mb-8 justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-indigo-700 rounded-xl flex items-center justify-center">
+              <HiOutlineShieldCheck className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-gradient">Admin Login</span>
+          </div>
+
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/20">
+              <HiOutlineShieldCheck className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Admin Sign In</h2>
+            <p className="text-gray-500 mt-1.5">Enter your admin credentials to continue</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="input-label">Email</label>
+              <div className="relative">
+                <HiOutlineMail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="admin@learnova.com"
+                  className="input-field pl-11"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="input-label">Password</label>
+              <div className="relative">
+                <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  className="input-field pl-11 pr-11"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl border border-red-100">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 text-base font-semibold rounded-xl text-white bg-gradient-to-r from-slate-700 to-indigo-700 hover:from-slate-800 hover:to-indigo-800 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Signing in...
+                </span>
+              ) : (
+                'Sign in to Admin Panel'
+              )}
+            </button>
+          </form>
+
+          <div className="text-center mt-6 space-y-2">
+            <p className="text-sm text-gray-500">
+              Don't have an admin account?{' '}
+              <Link to="/admin-signup" className="text-indigo-600 font-semibold hover:text-indigo-700">
+                Register as Admin
+              </Link>
+            </p>
+            <p className="text-sm text-gray-500">
+              Are you a learner?{' '}
+              <Link to="/login" className="text-indigo-600 font-semibold hover:text-indigo-700">
+                Learner Sign In
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminLogin;
