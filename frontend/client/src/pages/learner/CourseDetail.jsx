@@ -38,6 +38,7 @@ const CourseDetail = () => {
   const [reviewMeta, setReviewMeta] = useState({ averageRating: 0, count: 0 });
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
 
   useEffect(() => {
@@ -88,6 +89,84 @@ const CourseDetail = () => {
 
   const handleStartLearning = () => {
     navigate(`/learn/${id}`);
+  };
+
+  const loadRazorpayScript = () =>
+    new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
+  const handleBuyCourse = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setProcessingPayment(true);
+
+    try {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Unable to load Razorpay checkout.');
+      }
+
+      const orderRes = await API.post(`/payments/courses/${id}/order`);
+      const orderData = orderRes.data.data;
+
+      const razorpay = new window.Razorpay({
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Learnova',
+        description: `Purchase access for ${orderData.course.title}`,
+        order_id: orderData.orderId,
+        prefill: {
+          name: orderData.user.name,
+          email: orderData.user.email,
+        },
+        notes: {
+          courseId: orderData.course.id,
+        },
+        theme: {
+          color: '#0f172a',
+        },
+        modal: {
+          ondismiss: () => setProcessingPayment(false),
+        },
+        handler: async (response) => {
+          try {
+            await API.post(`/payments/courses/${id}/verify`, response);
+            toast.success('Payment verified. Course unlocked successfully.');
+            await fetchProgress();
+            setProcessingPayment(false);
+            navigate(`/learn/${id}`);
+          } catch (error) {
+            setProcessingPayment(false);
+            toast.error(error.response?.data?.message || error.message || 'Payment verification failed');
+          }
+        },
+      });
+
+      razorpay.on('payment.failed', (response) => {
+        setProcessingPayment(false);
+        toast.error(response.error?.description || 'Payment failed. Please try again.');
+      });
+
+      razorpay.open();
+    } catch (error) {
+      setProcessingPayment(false);
+      toast.error(error.response?.data?.message || error.message || 'Unable to start payment');
+    }
   };
 
   const handleOpenReview = () => {
@@ -216,9 +295,10 @@ const CourseDetail = () => {
 
       if (course.accessRule === 'Paid') {
         return {
-          label: `Buy Course ($${course.price || 0})`,
-          onClick: handleEnroll,
+          label: processingPayment ? 'Processing Payment...' : `Buy Course ($${course.price || 0})`,
+          onClick: handleBuyCourse,
           className: 'btn-primary flex items-center gap-2 px-8 py-3 text-base',
+          disabled: processingPayment,
         };
       }
 

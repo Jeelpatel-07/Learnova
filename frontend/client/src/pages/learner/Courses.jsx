@@ -104,7 +104,7 @@ const Courses = () => {
       return { label: 'Invitation Only', icon: <HiOutlineMail className="w-4 h-4" />, variant: 'btn-secondary' };
     }
     if (course.accessRule === 'Paid' && !progressMap[course._id]) {
-      return { label: `$${course.price}`, icon: <HiOutlineShoppingCart className="w-4 h-4" />, variant: 'btn-primary' };
+      return { label: `Buy Course ($${course.price})`, icon: <HiOutlineShoppingCart className="w-4 h-4" />, variant: 'btn-primary' };
     }
     const progress = progressMap[course._id];
     if (!progress) {
@@ -128,14 +128,52 @@ const Courses = () => {
       {/* Page Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="flex flex-col gap-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Explore Courses</h1>
               <p className="text-gray-500 mt-1">{courses.length} courses available to start your learning journey</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-72">
-                <SearchBar value={search} onChange={setSearch} placeholder="Search courses..." />
+
+            <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50/80 p-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex-1 max-w-xl">
+                <SearchBar
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Search by course name"
+                  compact
+                  inputClassName="border-gray-200 bg-white shadow-none focus:ring-0 focus:border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 outline-none transition focus:border-gray-300"
+                >
+                  <option value="newest">Newest</option>
+                  <option value="popular">Popular</option>
+                  <option value="rating">Top Rated</option>
+                </select>
+
+                <div className="flex items-center rounded-xl border border-gray-200 bg-white p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`rounded-lg p-2 transition-all ${
+                      viewMode === 'grid' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    <HiOutlineViewGrid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`rounded-lg p-2 transition-all ${
+                      viewMode === 'list' ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    <HiOutlineViewList className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -143,58 +181,31 @@ const Courses = () => {
       </div>
 
       <div className="page-container">
-        {/* Toolbar: Tags + Sort + View Toggle */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-          {/* Tag pills */}
+        <div className="mb-8 flex flex-col gap-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <HiOutlineFilter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+              <HiOutlineFilter className="w-4 h-4" />
+            </div>
             {allTags.map((tag) => (
               <button
                 key={tag}
                 onClick={() => setActiveTag(tag)}
                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                   activeTag === tag
-                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:text-gray-900'
                 }`}
               >
                 {tag}
               </button>
             ))}
           </div>
-
-          {/* Sort & View */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 cursor-pointer"
-            >
-              <option value="newest">Newest First</option>
-              <option value="popular">Most Popular</option>
-              <option value="rating">Highest Rated</option>
-            </select>
-            <div className="flex items-center bg-gray-100 rounded-xl p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                <HiOutlineViewGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                <HiOutlineViewList className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Results count */}
         <p className="text-sm text-gray-500 mb-5">
           Showing <span className="font-semibold text-gray-800">{filtered.length}</span> {filtered.length === 1 ? 'course' : 'courses'}
-          {activeTag !== 'All' && <> in <span className="font-semibold text-indigo-600">{activeTag}</span></>}
+          {activeTag !== 'All' && <> in <span className="font-semibold text-gray-900">{activeTag}</span></>}
         </p>
 
         {/* Grid View */}
